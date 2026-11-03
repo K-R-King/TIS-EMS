@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api, { errorMessage } from '../api';
-import { canEditExpenses, useAuth } from '../auth';
+import { canEditExpenses } from '../roles';
+import { useAuth } from '../useAuth';
 import { formatAmount, formatDate } from '../format';
 import useDropdowns from '../useDropdowns';
 import { Avatar, EmptyState, Loading, PageHeader, StatusPill } from '../components/ui';
@@ -19,7 +20,7 @@ function Pagination({ page, pages, onChange }) {
     <nav aria-label="Expense pages" className="d-flex justify-content-center mt-3">
       <ul className="pagination pagination-sm mb-0">
         <li className={`page-item${page === 1 ? ' disabled' : ''}`}>
-          <button className="page-link" onClick={() => onChange(page - 1)} aria-label="Previous page"><i className="bi bi-chevron-left" /></button>
+          <button className="page-link" onClick={() => onChange(page - 1)} aria-label="Previous page"><i aria-hidden="true" className="bi bi-chevron-left" /></button>
         </li>
         {shown.map((p, i) => (
           <React.Fragment key={p}>
@@ -30,7 +31,7 @@ function Pagination({ page, pages, onChange }) {
           </React.Fragment>
         ))}
         <li className={`page-item${page === pages ? ' disabled' : ''}`}>
-          <button className="page-link" onClick={() => onChange(page + 1)} aria-label="Next page"><i className="bi bi-chevron-right" /></button>
+          <button className="page-link" onClick={() => onChange(page + 1)} aria-label="Next page"><i aria-hidden="true" className="bi bi-chevron-right" /></button>
         </li>
       </ul>
     </nav>
@@ -46,6 +47,12 @@ export default function ExpenseList() {
   const [search, setSearch] = useState(searchParams.get('q') || '');
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+
+  // The delayed search below must build on the filters as they are when it fires, not when typing started
+  const latestParams = useRef(searchParams);
+  useEffect(() => {
+    latestParams.current = searchParams;
+  }, [searchParams]);
 
   const filters = Object.fromEntries(FILTERS.map((f) => [f, searchParams.get(f) || '']));
   const page = Math.max(1, Number(searchParams.get('page')) || 1);
@@ -64,9 +71,10 @@ export default function ExpenseList() {
   }, [queryKey]);
 
   const setFilter = (name, value) => {
-    const next = new URLSearchParams(searchParams);
+    const next = new URLSearchParams(latestParams.current);
     if (value) next.set(name, value); else next.delete(name);
     if (name !== 'page') next.delete('page'); // new filters start from the first page
+    latestParams.current = next;
     setSearchParams(next, { replace: name !== 'page' });
   };
 
@@ -78,7 +86,7 @@ export default function ExpenseList() {
   // Apply the text search after the user pauses typing
   useEffect(() => {
     const handle = setTimeout(() => {
-      if (search.trim() !== (searchParams.get('q') || '')) setFilter('q', search.trim());
+      if (search.trim() !== (latestParams.current.get('q') || '')) setFilter('q', search.trim());
     }, 300);
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -113,8 +121,8 @@ export default function ExpenseList() {
         subtitle={result ? `${result.total} expense${result.total === 1 ? '' : 's'} · ${formatAmount(result.totalAmount)}` : ' '}
         actions={canEditExpenses(user) && (
           <>
-            <Link to="/expenses/import" className="btn btn-outline-secondary"><i className="bi bi-file-earmark-spreadsheet" />Import from Excel</Link>
-            <Link to="/expenses/new" className="btn btn-primary"><i className="bi bi-plus-lg" />Add Expense</Link>
+            <Link to="/expenses/import" className="btn btn-outline-secondary"><i aria-hidden="true" className="bi bi-file-earmark-spreadsheet" />Import from Excel</Link>
+            <Link to="/expenses/new" className="btn btn-primary"><i aria-hidden="true" className="bi bi-plus-lg" />Add Expense</Link>
           </>
         )}
       />
@@ -125,7 +133,7 @@ export default function ExpenseList() {
             <div className="col-12 col-xl-3">
               <label className="form-label" htmlFor="f-q">Search</label>
               <div className="input-group input-group-sm">
-                <span className="input-group-text"><i className="bi bi-search" /></span>
+                <span className="input-group-text"><i aria-hidden="true" className="bi bi-search" /></span>
                 <input id="f-q" className="form-control" placeholder="Description or person"
                        value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
@@ -189,7 +197,7 @@ export default function ExpenseList() {
                         <div className="small text-secondary">{e.paymentMode?.name || 'No payment mode'}</div>
                       </td>
                       <td className="text-truncate" style={{ maxWidth: 260 }} title={e.description || ''}>
-                        {e.attachmentName && <i className="bi bi-paperclip text-secondary me-1" title="Has receipt" />}
+                        {e.attachmentName && <i aria-hidden="true" className="bi bi-paperclip text-secondary me-1" title="Has receipt" />}
                         {e.description || <span className="text-secondary">—</span>}
                         {e.taxApplicable && (
                           <span className="badge rounded-pill bg-success-subtle text-success-emphasis ms-2" title="Tax applicable">Tax</span>

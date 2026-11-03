@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { errorMessage } from '../api';
-import { homeFor, useAuth } from '../auth';
+import { homeFor } from '../roles';
+import { useAuth } from '../useAuth';
 import useTheme from '../theme';
 
 const FEATURES = [
@@ -45,14 +46,14 @@ export default function Login() {
     <div className="login-page">
       <section className="login-brand">
         <div className="d-flex align-items-center gap-2 fw-bold text-white fs-5">
-          <span className="brand-mark"><i className="bi bi-wallet2" /></span>
+          <span className="brand-mark"><i aria-hidden="true" className="bi bi-wallet2" /></span>
           TIS Expenses
         </div>
         <div>
           <h2 className="mb-4">Track, review and reimburse company expenses.</h2>
           <ul className="list-unstyled mb-0">
             {FEATURES.map(([icon, text]) => (
-              <li key={icon}><i className={`bi bi-${icon}`} /><span>{text}</span></li>
+              <li key={icon}><i aria-hidden="true" className={`bi bi-${icon}`} /><span>{text}</span></li>
             ))}
           </ul>
         </div>
@@ -62,7 +63,7 @@ export default function Login() {
       <section className="login-form-wrap">
         <form className="login-form" onSubmit={handleSubmit} noValidate>
           <div className="d-lg-none d-flex align-items-center gap-2 fw-bold fs-5 mb-4">
-            <span className="brand-mark"><i className="bi bi-wallet2" /></span>
+            <span className="brand-mark"><i aria-hidden="true" className="bi bi-wallet2" /></span>
             TIS Expenses
           </div>
           <h1 className="h3 fw-bold mb-1">Welcome back</h1>
@@ -71,7 +72,7 @@ export default function Login() {
           <div className="mb-3">
             <label htmlFor="username" className="form-label">Username</label>
             <div className="input-group">
-              <span className="input-group-text"><i className="bi bi-person" /></span>
+              <span className="input-group-text"><i aria-hidden="true" className="bi bi-person" /></span>
               <input id="username" className="form-control form-control-lg fs-6" value={username}
                      onChange={(e) => setUsername(e.target.value)} autoComplete="username" autoFocus required />
             </div>
@@ -79,18 +80,18 @@ export default function Login() {
           <div className="mb-4">
             <label htmlFor="password" className="form-label">Password</label>
             <div className="input-group">
-              <span className="input-group-text"><i className="bi bi-lock" /></span>
+              <span className="input-group-text"><i aria-hidden="true" className="bi bi-lock" /></span>
               <input id="password" type={showPassword ? 'text' : 'password'} className="form-control form-control-lg fs-6"
                      value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
               <button type="button" className="btn btn-outline-secondary btn-icon" onClick={() => setShowPassword((s) => !s)}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}>
-                <i className={`bi bi-eye${showPassword ? '-slash' : ''}`} />
+                <i aria-hidden="true" className={`bi bi-eye${showPassword ? '-slash' : ''}`} />
               </button>
             </div>
           </div>
           {error && (
             <div className="alert alert-danger py-2 d-flex gap-2 align-items-center" role="alert">
-              <i className="bi bi-exclamation-circle" />{error}
+              <i aria-hidden="true" className="bi bi-exclamation-circle" />{error}
             </div>
           )}
           <button type="submit" className="btn btn-primary btn-lg w-100 fs-6" disabled={submitting || !username || !password}>

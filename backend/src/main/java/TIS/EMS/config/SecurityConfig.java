@@ -39,6 +39,8 @@ public class SecurityConfig {
                         .requestMatchers("/error", "/api/auth/logout").permitAll()
                         // Kubernetes liveness/readiness probes
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        // API documentation (disabled in the prod profile)
+                        .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/users/**", "/api/settings/**").hasRole(Role.SUPERADMIN)
                         // Managers may comment on expenses but not change them
                         .requestMatchers(HttpMethod.POST, "/api/expenses/*/comments").authenticated()

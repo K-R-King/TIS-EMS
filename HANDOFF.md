@@ -10,8 +10,9 @@ One GitHub repository, `K-R-King/TIS-EMS`, with two independent projects:
 
 ```
 backend/     Spring Boot API   -> image "ems-backend"
-frontend/    React UI + nginx  -> image "ems-frontend"
-.github/workflows/ci.yml       build, test, image build, docker-compose smoke test
+frontend/    React UI + nginx  -> image "ems-frontend"   (built with Vite on Node 24)
+e2e/         Playwright end-to-end tests (run in CI against the docker compose stack)
+.github/workflows/ci.yml       build, test, image build, end-to-end tests
 docker-compose.yml             the full stack locally (MySQL + both images), same wiring as production
 ```
 
@@ -68,6 +69,7 @@ TLS terminates at the load balancer. Request bodies up to **12 MB** must be allo
 10 MB), e.g. `nginx.ingress.kubernetes.io/proxy-body-size: 12m` with ingress-nginx. ALB has no relevant limit.
 
 `/actuator/*` other than health is not exposed. Health endpoints don't need to be public through the ingress.
+API documentation (Swagger UI, `/v3/api-docs`) is disabled in the `prod` profile; developers use it locally.
 
 ## State and scaling
 
@@ -91,9 +93,9 @@ CloudWatch Container Insights / Fluent Bit. Notable events: account lockouts are
 `.github/workflows/ci.yml` runs on every push and pull request:
 
 1. `backend`: `./mvnw verify` on JDK 17, including the Flyway migrations against a real MySQL 8.4 (Testcontainers).
-2. `frontend`: `npm ci`, tests, production build.
-3. `smoke`: builds both images, starts them with MySQL via docker compose, waits for readiness and logs in through the
-   frontend proxy.
+2. `frontend`: `npm ci`, ESLint, component tests, production build.
+3. `e2e`: builds both images, starts them with MySQL via docker compose, waits for readiness, then runs the Playwright
+   end-to-end suite in Chromium through the frontend (the same images DevOps will deploy).
 
 Still to be added by DevOps, per the deployment plan: push images to ECR (e.g. tag with the commit SHA), deploy to EKS
 (Deployments, Services, Ingress, Secrets), CloudWatch monitoring, DNS and TLS for the production hostname, and RDS

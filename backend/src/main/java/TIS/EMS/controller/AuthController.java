@@ -8,11 +8,13 @@ import TIS.EMS.service.CurrentUser;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.security.Principal;
 
+@Tag(name = "Authentication", description = "Log in (HTTP Basic), current user, log out, change password")
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {

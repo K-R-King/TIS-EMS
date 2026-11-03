@@ -87,6 +87,14 @@ public class ExpenseService {
         return problems;
     }
 
+    /** Existing expenses with the same date, amount and category (other than the one being edited). */
+    public List<Expense> possibleDuplicates(LocalDate date, BigDecimal amount, Long categoryId, Long excludeId) {
+        if (date == null || amount == null || categoryId == null) return List.of();
+        return expenseRepository.findByDateAndAmountAndCategoryIdOrderByIdDesc(date, amount, categoryId).stream()
+                .filter(e -> !e.getId().equals(excludeId))
+                .toList();
+    }
+
     @Transactional
     public Expense create(Input in, User user, MultipartFile attachment, String action) {
         requireValid(in);

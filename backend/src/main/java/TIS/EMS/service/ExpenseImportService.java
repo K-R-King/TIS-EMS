@@ -60,9 +60,12 @@ public class ExpenseImportService {
         this.reimbursementTypeRepository = reimbursementTypeRepository;
     }
 
-    /** Returns how many expenses were imported. */
+    /**
+     * Returns how many expenses were imported. Rows matching an existing expense (or an earlier row) on date, amount
+     * and category are reported as possible duplicates unless allowDuplicates is set.
+     */
     @Transactional
-    public int importFile(MultipartFile file, User user) {
+    public int importFile(MultipartFile file, User user, boolean allowDuplicates) {
         Map<String, Long> categories = ids(categoryRepository);
         Map<String, Long> paymentModes = ids(paymentModeRepository);
         Map<String, Long> reimbursementTypes = ids(reimbursementTypeRepository);
@@ -71,6 +74,8 @@ public class ExpenseImportService {
 
         List<ExpenseService.Input> inputs = new ArrayList<>();
         List<String> problems = new ArrayList<>();
+        List<String> duplicates = new ArrayList<>();
+        Map<String, Integer> rowsByKey = new HashMap<>(); // date|amount|category -> first row number in the file
 
         try (InputStream in = file.getInputStream(); Workbook workbook = WorkbookFactory.create(in)) {
             Sheet sheet = workbook.getSheetAt(0);
@@ -108,7 +113,18 @@ public class ExpenseImportService {
                     ExpenseService.Input input = new ExpenseService.Input(date, amount, categoryId, paymentModeId,
                             reimbursementTypeId, tax, text(row, columns, DESCRIPTION, formatter), status);
                     rowProblems.addAll(expenseService.problems(input));
-                    if (rowProblems.isEmpty()) inputs.add(input);
+                    if (rowProblems.isEmpty()) {
+                        inputs.add(input);
+                        String key = date + "|" + amount.stripTrailingZeros().toPlainString() + "|" + categoryId;
+                        Integer earlierRow = rowsByKey.putIfAbsent(key, rowNumber);
+                        if (earlierRow != null) {
+                            duplicates.add("Row " + rowNumber + ": Same date, amount and category as row " + earlierRow);
+                        } else {
+                            expenseService.possibleDuplicates(date, amount, categoryId, null).stream().findFirst()
+                                    .ifPresent(existing -> duplicates.add("Row " + rowNumber
+                                            + ": Same date, amount and category as existing expense #" + existing.getId()));
+                        }
+                    }
                 }
                 rowProblems.forEach(p -> problems.add("Row " + rowNumber + ": " + p));
             }
@@ -122,6 +138,13 @@ public class ExpenseImportService {
                     problems.size() > MAX_REPORTED_PROBLEMS
                             ? append(problems.subList(0, MAX_REPORTED_PROBLEMS), "…and " + (problems.size() - MAX_REPORTED_PROBLEMS) + " more")
                             : problems);
+        }
+        if (!duplicates.isEmpty() && !allowDuplicates) {
+            throw new ImportFailedException(duplicates.size() + " row(s) look like duplicates. Nothing was imported.",
+                    duplicates.size() > MAX_REPORTED_PROBLEMS
+                            ? append(duplicates.subList(0, MAX_REPORTED_PROBLEMS), "…and " + (duplicates.size() - MAX_REPORTED_PROBLEMS) + " more")
+                            : duplicates,
+                    true);
         }
         if (inputs.isEmpty()) {
             throw new ImportFailedException("The file has no expenses", List.of("Add one expense per row below the headings."));

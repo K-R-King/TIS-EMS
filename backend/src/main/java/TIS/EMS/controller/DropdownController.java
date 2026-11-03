@@ -7,10 +7,12 @@ import TIS.EMS.models.ReimbursementType;
 import TIS.EMS.repository.CategoryRepository;
 import TIS.EMS.repository.PaymentModeRepository;
 import TIS.EMS.repository.ReimbursementTypeRepository;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "Dropdowns", description = "Values for the expense form and filters")
 @RestController
 @RequestMapping("/api/dropdowns")
 public class DropdownController {

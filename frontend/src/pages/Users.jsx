@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api, { errorMessage } from '../api';
-import { ROLE_LABELS, ROLES, useAuth } from '../auth';
+import { ROLE_LABELS, ROLES } from '../roles';
+import { useAuth } from '../useAuth';
 import { Avatar, ConfirmDialog, Loading, PageHeader } from '../components/ui';
 
 const ROLE_TONES = { [ROLES.SUPERADMIN]: 'primary', [ROLES.ADMIN]: 'info', [ROLES.MANAGER]: 'secondary' };
@@ -130,11 +131,11 @@ export default function Users() {
       <PageHeader
         title="Users"
         subtitle="Add people and choose what they can do."
-        actions={!editing && <button className="btn btn-primary" onClick={() => startEdit({})}><i className="bi bi-person-plus" />Add user</button>}
+        actions={!editing && <button className="btn btn-primary" onClick={() => startEdit({})}><i aria-hidden="true" className="bi bi-person-plus" />Add user</button>}
       />
 
       {error && <div className="alert alert-danger">{error}</div>}
-      {notice && <div className="alert alert-success d-flex gap-2 align-items-center"><i className="bi bi-check-circle" />{notice}</div>}
+      {notice && <div className="alert alert-success d-flex gap-2 align-items-center"><i aria-hidden="true" className="bi bi-check-circle" />{notice}</div>}
 
       {editing && (
         <UserForm key={editing.id || 'new'} initial={editing} onSaved={handleSaved} onCancel={() => setEditing(null)} />
@@ -158,7 +159,7 @@ export default function Users() {
                           {u.locked && (
                             <span className="badge rounded-pill bg-danger-subtle text-danger-emphasis border border-danger-subtle"
                                   title="Locked after too many failed logins">
-                              <i className="bi bi-lock-fill me-1" />Locked
+                              <i aria-hidden="true" className="bi bi-lock-fill me-1" />Locked
                             </span>
                           )}
                         </span>
@@ -172,15 +173,15 @@ export default function Users() {
                       <td className="text-end text-nowrap">
                         {u.locked && (
                           <button className="btn btn-sm btn-outline-success me-2" onClick={() => handleUnlock(u)}>
-                            <i className="bi bi-unlock" />Unlock
+                            <i aria-hidden="true" className="bi bi-unlock" />Unlock
                           </button>
                         )}
                         <button className="btn btn-sm btn-outline-secondary btn-icon me-2" onClick={() => startEdit(u)}
-                                aria-label={`Edit ${u.username}`} title="Edit"><i className="bi bi-pencil" /></button>
+                                aria-label={`Edit ${u.username}`} title="Edit"><i aria-hidden="true" className="bi bi-pencil" /></button>
                         <button className="btn btn-sm btn-outline-danger btn-icon" onClick={() => setDeleting(u)}
                                 disabled={u.id === me.id} aria-label={`Delete ${u.username}`}
                                 title={u.id === me.id ? 'You cannot delete your own account' : 'Delete'}>
-                          <i className="bi bi-trash" />
+                          <i aria-hidden="true" className="bi bi-trash" />
                         </button>
                       </td>
                     </tr>

@@ -108,6 +108,31 @@ class ExpenseImportTests {
     }
 
     @Test
+    void likelyDuplicatesNeedConfirmation() throws Exception {
+        Object[] header = {"Date", "Amount", "Category", "Description"};
+        mvc.perform(multipart("/api/expenses/import")
+                        .file(workbook(header, new Object[]{"2026-03-03", 777, "Hotel", "Original"}))
+                        .with(httpBasic("i-admin", PASSWORD)))
+                .andExpect(status().isOk());
+
+        // Same date, amount and category as the existing expense, and a repeated row inside the file
+        MockMultipartFile again = workbook(header,
+                new Object[]{"2026-03-03", "777.00", "Hotel", "Entered twice"},
+                new Object[]{"2026-03-04", 50, "Hotel", "Taxi"},
+                new Object[]{"2026-03-04", 50, "Hotel", "Taxi back"});
+        mvc.perform(multipart("/api/expenses/import").file(again).with(httpBasic("i-admin", PASSWORD)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.onlyDuplicates").value(true))
+                .andExpect(jsonPath("$.details", hasItem(startsWith("Row 2: Same date, amount and category as existing expense #"))))
+                .andExpect(jsonPath("$.details", hasItem("Row 4: Same date, amount and category as row 3")));
+
+        mvc.perform(multipart("/api/expenses/import").file(again).param("allowDuplicates", "true")
+                        .with(httpBasic("i-admin", PASSWORD)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.imported").value(3));
+    }
+
+    @Test
     void managersCannotImport() throws Exception {
         mvc.perform(multipart("/api/expenses/import").file(workbook(new Object[]{"Date"}))
                         .with(httpBasic("i-manager", PASSWORD)))

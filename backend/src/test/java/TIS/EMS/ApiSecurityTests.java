@@ -263,6 +263,33 @@ class ApiSecurityTests {
     }
 
     @Test
+    void possibleDuplicatesAreFoundIgnoringTheExpenseBeingEdited() throws Exception {
+        long id = createExpenseAsAdmin(); // today, 125.50, categoryId
+        String today = LocalDate.now().toString();
+        mvc.perform(get("/api/expenses/duplicates").with(as("t-admin"))
+                        .param("date", today).param("amount", "125.5").param("categoryId", categoryId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", hasItem((int) id)));
+        mvc.perform(get("/api/expenses/duplicates").with(as("t-admin"))
+                        .param("date", today).param("amount", "125.5").param("categoryId", categoryId.toString())
+                        .param("excludeId", String.valueOf(id)))
+                .andExpect(jsonPath("$[*].id", not(hasItem((int) id))));
+        mvc.perform(get("/api/expenses/duplicates").with(as("t-admin"))
+                        .param("date", today).param("amount", "125.51").param("categoryId", categoryId.toString()))
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
+    void apiDocumentationIsAvailable() throws Exception {
+        mvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.info.title").value("TIS Expense Management API"))
+                .andExpect(jsonPath("$.paths['/api/expenses']").exists())
+                .andExpect(jsonPath("$.components.securitySchemes.basic.scheme").value("basic"));
+        mvc.perform(get("/swagger-ui/index.html")).andExpect(status().isOk());
+    }
+
+    @Test
     void healthProbesArePublic() throws Exception {
         mvc.perform(get("/actuator/health/liveness")).andExpect(status().isOk());
         mvc.perform(get("/actuator/health/readiness")).andExpect(status().isOk());

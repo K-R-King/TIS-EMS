@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import api, { errorMessage } from '../api';
-import { ROLE_LABELS, useAuth } from '../auth';
+import { ROLE_LABELS } from '../roles';
+import { useAuth } from '../useAuth';
 import { Avatar, PageHeader } from '../components/ui';
 
 export default function Account() {
@@ -69,7 +70,7 @@ export default function Account() {
           {error && <div className="alert alert-danger py-2 mt-3 mb-0">{error}</div>}
           {done && (
             <div className="alert alert-success py-2 mt-3 mb-0 d-flex gap-2 align-items-center">
-              <i className="bi bi-check-circle" />Password changed.
+              <i aria-hidden="true" className="bi bi-check-circle" />Password changed.
             </div>
           )}
         </div>

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import api, { errorMessage } from '../api';
-import { canEditExpenses, useAuth } from '../auth';
+import { canEditExpenses } from '../roles';
+import { useAuth } from '../useAuth';
 import { formatAmount, formatDate, formatDateTime } from '../format';
 import { Avatar, ConfirmDialog, EmptyState, Loading, PageHeader, StatusPill } from '../components/ui';
 
@@ -30,10 +31,10 @@ function ReceiptPreview({ expense }) {
         ? <iframe src={url} title="Receipt" className="receipt-preview-pdf" />
         : <img src={url} alt={`Receipt: ${expense.attachmentName}`} className="receipt-preview" />}
       <div className="d-flex align-items-center gap-2 mt-3 small">
-        <i className="bi bi-file-earmark text-secondary" />
+        <i aria-hidden="true" className="bi bi-file-earmark text-secondary" />
         <span className="text-truncate">{expense.attachmentName}</span>
         <a href={url} download={expense.attachmentName} className="btn btn-sm btn-outline-secondary ms-auto">
-          <i className="bi bi-download" />Download
+          <i aria-hidden="true" className="bi bi-download" />Download
         </a>
       </div>
     </>
@@ -72,7 +73,7 @@ function Comments({ expenseId }) {
   return (
     <div className="card">
       <div className="card-header d-flex align-items-center gap-2">
-        <i className="bi bi-chat-left-text" />Review comments
+        <i aria-hidden="true" className="bi bi-chat-left-text" />Review comments
         {comments.length > 0 && <span className="badge rounded-pill bg-secondary-subtle text-secondary-emphasis">{comments.length}</span>}
       </div>
       <div className="card-body">
@@ -124,12 +125,12 @@ function Activity({ expenseId, refreshKey }) {
   if (!entries || entries.length === 0) return null;
   return (
     <div className="card">
-      <div className="card-header d-flex align-items-center gap-2"><i className="bi bi-clock-history" />Activity</div>
+      <div className="card-header d-flex align-items-center gap-2"><i aria-hidden="true" className="bi bi-clock-history" />Activity</div>
       <ul className="list-group list-group-flush">
         {entries.map((h) => (
           <li key={h.id} className="list-group-item d-flex gap-3 py-3">
             <span className="stat-icon bg-body-tertiary text-secondary" style={{ width: 32, height: 32, fontSize: '0.9rem' }}>
-              <i className={`bi bi-${ACTION_ICONS[h.action] || 'dot'}`} />
+              <i aria-hidden="true" className={`bi bi-${ACTION_ICONS[h.action] || 'dot'}`} />
             </span>
             <div className="min-w-0 small">
               <div><strong>{h.user.name}</strong> {ACTION_LABELS[h.action] || h.action.toLowerCase()}</div>
@@ -158,7 +159,6 @@ export default function ExpenseDetails() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    setExpense(null);
     api.get(`/expenses/${id}`)
       .then((res) => setExpense(res.data))
       .catch((err) => setError(errorMessage(err, 'Could not load expense.')));
@@ -178,7 +178,7 @@ export default function ExpenseDetails() {
 
   const back = { to: '/expenses', label: 'Expenses' };
   if (error && !expense) return <><PageHeader title="Expense" back={back} /><div className="alert alert-danger">{error}</div></>;
-  if (!expense) return <Loading />;
+  if (!expense || expense.id !== Number(id)) return <Loading />;
 
   const rows = [
     ['Date', formatDate(expense.date)],
@@ -196,15 +196,15 @@ export default function ExpenseDetails() {
         back={back}
         actions={canEditExpenses(user) && (
           <>
-            <Link to={`/expenses/${id}/edit`} className="btn btn-outline-primary"><i className="bi bi-pencil" />Edit</Link>
-            <button className="btn btn-outline-danger" onClick={() => setConfirming(true)}><i className="bi bi-trash" />Delete</button>
+            <Link to={`/expenses/${id}/edit`} className="btn btn-outline-primary"><i aria-hidden="true" className="bi bi-pencil" />Edit</Link>
+            <button className="btn btn-outline-danger" onClick={() => setConfirming(true)}><i aria-hidden="true" className="bi bi-trash" />Delete</button>
           </>
         )}
       />
 
       {location.state?.saved && (
         <div className="alert alert-success d-flex gap-2 align-items-center">
-          <i className="bi bi-check-circle" />
+          <i aria-hidden="true" className="bi bi-check-circle" />
           Expense {location.state.saved}.{location.state.saved === 'created' && ' It is now pending review.'}
         </div>
       )}
@@ -239,7 +239,7 @@ export default function ExpenseDetails() {
         </div>
         <div className="col-lg-6 d-flex flex-column gap-3">
           <div className="card">
-            <div className="card-header d-flex align-items-center gap-2"><i className="bi bi-paperclip" />Receipt</div>
+            <div className="card-header d-flex align-items-center gap-2"><i aria-hidden="true" className="bi bi-paperclip" />Receipt</div>
             <div className="card-body">
               {expense.attachmentName
                 ? <ReceiptPreview expense={expense} />

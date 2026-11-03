@@ -12,6 +12,7 @@ import TIS.EMS.service.CurrentUser;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -19,6 +20,7 @@ import java.security.Principal;
 import java.util.List;
 
 /** User management; Super Admin only (enforced in SecurityConfig). */
+@Tag(name = "Users", description = "User management (Super Admin only)")
 @RestController
 @RequestMapping("/api/users")
 public class UserController {

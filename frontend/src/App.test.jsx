@@ -1,19 +1,16 @@
 import { render, screen } from '@testing-library/react';
+import { afterEach, expect, test, vi } from 'vitest';
 import App from './App';
 import api from './api';
 
-jest.mock('./api', () => {
-  const instance = { get: jest.fn(), post: jest.fn(), put: jest.fn(), delete: jest.fn() };
-  return {
-    __esModule: true,
-    default: instance,
-    setUnauthorizedHandler: jest.fn(),
-    errorMessage: (e, fallback) => fallback,
-  };
-});
+vi.mock('./api', () => ({
+  default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
+  setUnauthorizedHandler: vi.fn(),
+  errorMessage: (e, fallback) => fallback,
+}));
 
 afterEach(() => {
-  jest.resetAllMocks();
+  vi.resetAllMocks();
   window.history.pushState({}, '', '/');
 });
 

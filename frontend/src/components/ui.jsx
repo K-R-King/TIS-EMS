@@ -32,7 +32,7 @@ export function PageHeader({ title, subtitle, back, actions }) {
     <div className="page-header">
       <div>
         {back && (
-          <Link to={back.to} className="back-link"><i className="bi bi-arrow-left" />{back.label}</Link>
+          <Link to={back.to} className="back-link"><i aria-hidden="true" className="bi bi-arrow-left" />{back.label}</Link>
         )}
         <h1>{title}</h1>
         {subtitle && <p className="subtitle">{subtitle}</p>}
@@ -45,7 +45,7 @@ export function PageHeader({ title, subtitle, back, actions }) {
 export function EmptyState({ icon = 'inbox', title, children }) {
   return (
     <div className="empty-state">
-      <i className={`bi bi-${icon}`} />
+      <i aria-hidden="true" className={`bi bi-${icon}`} />
       <div className="title">{title}</div>
       {children && <div className="small mt-1">{children}</div>}
     </div>
@@ -62,7 +62,7 @@ export function Loading({ label = 'Loading…' }) {
 }
 
 /** A Bootstrap-styled confirmation dialog, rendered without Bootstrap's JavaScript. */
-export function ConfirmDialog({ title, children, confirmLabel = 'Delete', busy, onConfirm, onCancel }) {
+export function ConfirmDialog({ title, children, confirmLabel = 'Delete', tone = 'danger', busy, onConfirm, onCancel }) {
   return (
     <>
       <div className="modal d-block" tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="confirm-title"
@@ -71,7 +71,7 @@ export function ConfirmDialog({ title, children, confirmLabel = 'Delete', busy, 
           <div className="modal-content">
             <div className="modal-body p-4">
               <div className="d-flex gap-3">
-                <div className="stat-icon bg-danger-subtle text-danger-emphasis"><i className="bi bi-exclamation-triangle" /></div>
+                <div className={`stat-icon bg-${tone}-subtle text-${tone}-emphasis`}><i aria-hidden="true" className="bi bi-exclamation-triangle" /></div>
                 <div>
                   <h2 id="confirm-title" className="h5 mb-1">{title}</h2>
                   <div className="text-secondary">{children}</div>
@@ -82,7 +82,7 @@ export function ConfirmDialog({ title, children, confirmLabel = 'Delete', busy, 
               <button type="button" className="btn btn-outline-secondary" onClick={onCancel} disabled={busy} autoFocus>
                 Cancel
               </button>
-              <button type="button" className="btn btn-danger" onClick={onConfirm} disabled={busy}>
+              <button type="button" className={`btn btn-${tone}`} onClick={onConfirm} disabled={busy}>
                 {busy ? 'Working…' : confirmLabel}
               </button>
             </div>

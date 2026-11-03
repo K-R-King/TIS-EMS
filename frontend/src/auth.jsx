@@ -1,23 +1,7 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import api, { setUnauthorizedHandler } from './api';
-
-export const ROLES = { SUPERADMIN: 'SUPERADMIN', ADMIN: 'ADMIN', MANAGER: 'MANAGER' };
-
-export const ROLE_LABELS = {
-  SUPERADMIN: 'Super Admin',
-  ADMIN: 'Expense Admin',
-  MANAGER: 'Manager',
-};
-
-export const canEditExpenses = (user) => user?.role === ROLES.SUPERADMIN || user?.role === ROLES.ADMIN;
-
-/** Where each role lands after logging in. */
-export function homeFor(user) {
-  return user?.role === ROLES.MANAGER ? '/expenses' : '/';
-}
-
-const AuthContext = createContext(null);
+import { AuthContext, useAuth } from './useAuth';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -60,10 +44,6 @@ export function AuthProvider({ children }) {
   );
 }
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
-
 /** Renders children only for logged-in users. */
 export function RequireAuth({ children }) {
   const { user, checking, loggedOut } = useAuth();
@@ -85,7 +65,7 @@ export function RequireRole({ roles, children }) {
     return (
       <div className="container py-5" style={{ maxWidth: 560 }}>
         <div className="alert alert-warning d-flex gap-2 align-items-center">
-          <i className="bi bi-shield-lock" />You do not have access to this page.
+          <i aria-hidden="true" className="bi bi-shield-lock" />You do not have access to this page.
         </div>
       </div>
     );

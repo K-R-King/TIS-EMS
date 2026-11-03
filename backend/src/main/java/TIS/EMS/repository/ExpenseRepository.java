@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -15,4 +17,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long>, JpaSpec
     boolean existsByEnteredById(Long id);
 
     List<Expense> findTop5ByOrderByDateDescIdDesc();
+
+    /** Expenses that look like the same purchase entered twice. */
+    List<Expense> findByDateAndAmountAndCategoryIdOrderByIdDesc(LocalDate date, BigDecimal amount, Long categoryId);
 }

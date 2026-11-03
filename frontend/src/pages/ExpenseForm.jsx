@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import api, { errorMessage } from '../api';
-import { useAuth } from '../auth';
-import { today } from '../format';
+import { useAuth } from '../useAuth';
 import useDropdowns from '../useDropdowns';
-import { Avatar, Loading, PageHeader } from '../components/ui';
+import { Avatar, ConfirmDialog, Loading, PageHeader } from '../components/ui';
+import { formatAmount, formatDate, today } from '../format';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
@@ -56,6 +56,25 @@ export default function ExpenseForm() {
   const [serverError, setServerError] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(editing);
+  // Possible duplicates for the current date + amount + category, keyed so stale results are ignored
+  const [duplicates, setDuplicates] = useState({ key: null, items: [] });
+  const [confirmingDuplicate, setConfirmingDuplicate] = useState(false);
+
+  const duplicateKey = form.date && /^\d+(\.\d{1,2})?$/.test(form.amount) && Number(form.amount) > 0 && form.categoryId
+    ? `${form.date}|${Number(form.amount)}|${form.categoryId}`
+    : null;
+  const possibleDuplicates = duplicates.key === duplicateKey ? duplicates.items : [];
+
+  useEffect(() => {
+    if (!duplicateKey) return undefined;
+    const [date, amount, categoryId] = duplicateKey.split('|');
+    const handle = setTimeout(() => {
+      api.get('/expenses/duplicates', { params: { date, amount, categoryId, excludeId: id } })
+        .then((res) => setDuplicates({ key: duplicateKey, items: res.data }))
+        .catch(() => setDuplicates({ key: duplicateKey, items: [] }));
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [duplicateKey, id]);
 
   useEffect(() => {
     if (!editing) return;
@@ -92,12 +111,21 @@ export default function ExpenseForm() {
     setErrors((errs) => ({ ...errs, attachment: validate(form, chosen).attachment }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setServerError('');
     const found = validate(form, file);
     setErrors(found);
     if (Object.keys(found).length > 0) return;
+    if (possibleDuplicates.length > 0) {
+      setConfirmingDuplicate(true);
+      return;
+    }
+    save();
+  };
+
+  const save = async () => {
+    setConfirmingDuplicate(false);
 
     const data = new FormData();
     Object.entries(form).forEach(([key, value]) => data.append(key, value));
@@ -132,7 +160,7 @@ export default function ExpenseForm() {
       />
       {listError && <div className="alert alert-warning">{listError}</div>}
       {serverError && (
-        <div className="alert alert-danger d-flex gap-2 align-items-center"><i className="bi bi-exclamation-circle" />{serverError}</div>
+        <div className="alert alert-danger d-flex gap-2 align-items-center"><i aria-hidden="true" className="bi bi-exclamation-circle" />{serverError}</div>
       )}
 
       <form onSubmit={handleSubmit} noValidate>
@@ -172,6 +200,25 @@ export default function ExpenseForm() {
                 {paymentModes.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
+
+            {possibleDuplicates.length > 0 && (
+              <div className="col-12">
+                <div className="alert alert-warning mb-0 small" role="status">
+                  <div className="fw-semibold mb-1">
+                    <i aria-hidden="true" className="bi bi-files me-2" />Possible duplicate: this date, amount and category already exist
+                  </div>
+                  <ul className="mb-0 ps-3">
+                    {possibleDuplicates.slice(0, 3).map((d) => (
+                      <li key={d.id}>
+                        <a href={`/expenses/${d.id}`} target="_blank" rel="noreferrer">Expense #{d.id}</a>
+                        {' '}· {formatDate(d.date)} · {formatAmount(d.amount)} · {d.category.name} · entered by {d.enteredBy.name}
+                        {d.description && <> · “{d.description}”</>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
 
             <div className="col-12">
               <label htmlFor="description" className="form-label">Description / comments</label>
@@ -218,7 +265,7 @@ export default function ExpenseForm() {
           <div className="card-body">
             {existing?.attachmentName && !removeAttachment && !file && (
               <div className="d-flex align-items-center gap-2 mb-3 p-2 rounded bg-body-tertiary">
-                <i className="bi bi-file-earmark-check text-success fs-5" />
+                <i aria-hidden="true" className="bi bi-file-earmark-check text-success fs-5" />
                 <span className="text-truncate">{existing.attachmentName}</span>
                 <button type="button" className="btn btn-sm btn-link text-danger ms-auto" onClick={() => setRemoveAttachment(true)}>
                   Remove
@@ -233,7 +280,7 @@ export default function ExpenseForm() {
             )}
             <label htmlFor="attachment" className={`d-block border border-2 rounded-3 text-center p-4 ${errors.attachment ? 'border-danger' : ''}`}
                    style={{ borderStyle: 'dashed', cursor: 'pointer' }}>
-              <i className={`bi bi-${fileLabel ? 'file-earmark-check text-success' : 'cloud-arrow-up text-secondary'} fs-2 d-block mb-1`} />
+              <i aria-hidden="true" className={`bi bi-${fileLabel ? 'file-earmark-check text-success' : 'cloud-arrow-up text-secondary'} fs-2 d-block mb-1`} />
               <span className="fw-medium">{fileLabel || (existing?.attachmentName ? 'Replace receipt' : 'Upload a receipt or invoice')}</span>
               <span className="d-block small text-secondary">PDF, JPG or PNG · up to 10 MB</span>
             </label>
@@ -256,6 +303,14 @@ export default function ExpenseForm() {
           </button>
         </div>
       </form>
+
+      {confirmingDuplicate && (
+        <ConfirmDialog title="Save a possible duplicate?" tone="warning" confirmLabel="Save anyway"
+                       onConfirm={save} onCancel={() => setConfirmingDuplicate(false)}>
+          {possibleDuplicates.length === 1 ? 'An expense' : `${possibleDuplicates.length} expenses`} with the same date,
+          amount and category already exist{possibleDuplicates.length === 1 ? 's' : ''}. Save this one as well?
+        </ConfirmDialog>
+      )}
     </div>
   );
 }

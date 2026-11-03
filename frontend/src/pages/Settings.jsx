@@ -43,7 +43,7 @@ function ListEditor({ title, icon, type, items, onChange }) {
     <div className="col-lg-4">
       <div className="card h-100">
         <div className="card-header d-flex align-items-center gap-2">
-          <i className={`bi bi-${icon}`} />{title}
+          <i aria-hidden="true" className={`bi bi-${icon}`} />{title}
           <span className="badge rounded-pill bg-secondary-subtle text-secondary-emphasis ms-auto">{items.length}</span>
         </div>
         <ul className="list-group list-group-flush">
@@ -64,11 +64,11 @@ function ListEditor({ title, icon, type, items, onChange }) {
                   <span className="text-nowrap list-item-actions">
                     <button className="btn btn-sm btn-link text-secondary btn-icon" aria-label={`Rename ${item.name}`} title="Rename"
                             onClick={() => { setEditId(item.id); setEditName(item.name); }}>
-                      <i className="bi bi-pencil" />
+                      <i aria-hidden="true" className="bi bi-pencil" />
                     </button>
                     <button className="btn btn-sm btn-link text-danger btn-icon" aria-label={`Delete ${item.name}`} title="Delete"
                             onClick={() => setDeleting(item)}>
-                      <i className="bi bi-trash" />
+                      <i aria-hidden="true" className="bi bi-trash" />
                     </button>
                   </span>
                 </div>
@@ -81,7 +81,7 @@ function ListEditor({ title, icon, type, items, onChange }) {
           <form className="d-flex gap-2" onSubmit={add}>
             <input className="form-control form-control-sm" placeholder="New item" value={newName}
                    aria-label={`New ${title}`} onChange={(e) => setNewName(e.target.value)} maxLength={100} />
-            <button className="btn btn-sm btn-primary text-nowrap" disabled={!newName.trim()}><i className="bi bi-plus-lg" />Add</button>
+            <button className="btn btn-sm btn-primary text-nowrap" disabled={!newName.trim()}><i aria-hidden="true" className="bi bi-plus-lg" />Add</button>
           </form>
         </div>
       </div>

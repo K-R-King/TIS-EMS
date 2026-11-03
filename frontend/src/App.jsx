@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, RequireAuth, RequireRole, ROLES } from './auth';
+import { AuthProvider, RequireAuth, RequireRole } from './auth';
+import { ROLES } from './roles';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';

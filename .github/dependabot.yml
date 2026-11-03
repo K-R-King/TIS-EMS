@@ -9,6 +9,9 @@ updates:
     directory: /frontend
     schedule: { interval: weekly }
     open-pull-requests-limit: 5
+  - package-ecosystem: npm
+    directory: /e2e
+    schedule: { interval: monthly }
   - package-ecosystem: docker
     directories: [/backend, /frontend]
     schedule: { interval: monthly }

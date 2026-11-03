@@ -23,7 +23,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ImportFailedException.class)
     public ResponseEntity<Map<String, Object>> handleImport(ImportFailedException e) {
-        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage(), "details", List.copyOf(e.getProblems())));
+        return ResponseEntity.badRequest().body(Map.of(
+                "error", e.getMessage(),
+                "details", List.copyOf(e.getProblems()),
+                "onlyDuplicates", e.isOnlyDuplicates()));
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)

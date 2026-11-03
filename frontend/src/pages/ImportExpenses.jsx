@@ -35,24 +35,32 @@ export default function ImportExpenses() {
     }
   };
 
-  const handleUpload = async (e) => {
-    e.preventDefault();
+  const upload = async (allowDuplicates) => {
     if (!file) return;
     setUploading(true);
     setResult(null);
     setFailure(null);
     const data = new FormData();
     data.append('file', file);
+    if (allowDuplicates) data.append('allowDuplicates', 'true');
     try {
       const res = await api.post('/expenses/import', data);
       setResult(res.data.imported);
       setFile(null);
-      e.target.reset();
     } catch (err) {
-      setFailure({ error: errorMessage(err, 'Import failed.'), details: err.response?.data?.details || [] });
+      setFailure({
+        error: errorMessage(err, 'Import failed.'),
+        details: err.response?.data?.details || [],
+        onlyDuplicates: Boolean(err.response?.data?.onlyDuplicates),
+      });
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleUpload = (e) => {
+    e.preventDefault();
+    upload(false);
   };
 
   return (
@@ -72,7 +80,7 @@ export default function ImportExpenses() {
                 The template has the right columns, an example row, and dropdowns with your current categories and payment modes.
               </p>
               <button className="btn btn-outline-primary" onClick={downloadTemplate}>
-                <i className="bi bi-download" />Download template
+                <i aria-hidden="true" className="bi bi-download" />Download template
               </button>
             </div>
           </div>
@@ -83,11 +91,11 @@ export default function ImportExpenses() {
             <div className="card-body">
               <label htmlFor="import-file" className="d-block border border-2 rounded-3 text-center p-4"
                      style={{ borderStyle: 'dashed', cursor: 'pointer' }}>
-                <i className={`bi bi-${file ? 'file-earmark-check text-success' : 'file-earmark-spreadsheet text-secondary'} fs-2 d-block mb-1`} />
+                <i aria-hidden="true" className={`bi bi-${file ? 'file-earmark-check text-success' : 'file-earmark-spreadsheet text-secondary'} fs-2 d-block mb-1`} />
                 <span className="fw-medium">{file ? file.name : 'Choose an Excel file'}</span>
                 <span className="d-block small text-secondary">.xlsx or .xls · up to 2,000 rows</span>
               </label>
-              <input id="import-file" type="file" className="visually-hidden"
+              <input id="import-file" type="file" className="visually-hidden" key={result ?? 'file'}
                      accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                      onChange={(e) => { setFile(e.target.files[0] || null); setResult(null); setFailure(null); }} />
             </div>
@@ -95,7 +103,7 @@ export default function ImportExpenses() {
               <button className="btn btn-primary" disabled={!file || uploading}>
                 {uploading
                   ? <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />Importing…</>
-                  : <><i className="bi bi-upload" />Import</>}
+                  : <><i aria-hidden="true" className="bi bi-upload" />Import</>}
               </button>
             </div>
           </form>
@@ -104,15 +112,25 @@ export default function ImportExpenses() {
 
       {result !== null && (
         <div className="alert alert-success d-flex gap-2 align-items-center mt-3">
-          <i className="bi bi-check-circle" />
+          <i aria-hidden="true" className="bi bi-check-circle" />
           Imported {result} expense{result === 1 ? '' : 's'}. <Link to="/expenses">View expenses</Link>
         </div>
       )}
       {failure && (
-        <div className="alert alert-danger mt-3">
-          <div className="fw-semibold"><i className="bi bi-exclamation-circle me-2" />{failure.error}</div>
+        <div className={`alert ${failure.onlyDuplicates ? 'alert-warning' : 'alert-danger'} mt-3`}>
+          <div className="fw-semibold">
+            <i aria-hidden="true" className={`bi bi-${failure.onlyDuplicates ? 'files' : 'exclamation-circle'} me-2`} />{failure.error}
+          </div>
           {failure.details.length > 0 && (
             <ul className="mb-0 mt-2 small">{failure.details.map((d) => <li key={d}>{d}</li>)}</ul>
+          )}
+          {failure.onlyDuplicates && (
+            <div className="mt-3 d-flex flex-wrap align-items-center gap-2">
+              <span className="small">If these are genuinely separate expenses:</span>
+              <button className="btn btn-sm btn-warning" onClick={() => upload(true)} disabled={uploading}>
+                Import anyway
+              </button>
+            </div>
           )}
         </div>
       )}

@@ -7,6 +7,7 @@ import TIS.EMS.models.PaymentMode;
 import TIS.EMS.models.ReimbursementType;
 import TIS.EMS.repository.*;
 import org.springframework.http.HttpStatus;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -18,6 +19,7 @@ import java.util.function.LongPredicate;
  * Manages the dropdown lists; Super Admin only (enforced in SecurityConfig).
  * Lists are read through /api/dropdowns.
  */
+@Tag(name = "Settings", description = "Manage dropdown lists (Super Admin only)")
 @RestController
 @RequestMapping("/api/settings/{type}")
 public class SettingsController {

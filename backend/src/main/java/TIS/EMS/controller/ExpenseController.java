@@ -4,6 +4,7 @@ import TIS.EMS.dto.*;
 import TIS.EMS.models.*;
 import TIS.EMS.repository.*;
 import TIS.EMS.service.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -23,6 +24,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Tag(name = "Expenses", description = "Expense entries, receipts, comments, history and Excel import")
 @RestController
 @RequestMapping("/api/expenses")
 public class ExpenseController {
@@ -93,6 +95,17 @@ public class ExpenseController {
                 expenseRepository.findTop5ByOrderByDateDescIdDesc().stream().map(ExpenseResponse::from).toList());
     }
 
+    /** Expenses with the same date, amount and category, so the form can warn before a double entry. */
+    @GetMapping("/duplicates")
+    public List<ExpenseResponse> duplicates(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam BigDecimal amount,
+            @RequestParam Long categoryId,
+            @RequestParam(required = false) Long excludeId) {
+        return expenseService.possibleDuplicates(date, amount, categoryId, excludeId).stream()
+                .map(ExpenseResponse::from).toList();
+    }
+
     @GetMapping("/{id}")
     public ExpenseResponse get(@PathVariable Long id) {
         return ExpenseResponse.from(find(id));
@@ -155,8 +168,10 @@ public class ExpenseController {
     }
 
     @PostMapping(path = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Map<String, Integer> importExpenses(@RequestParam("file") MultipartFile file, Principal principal) {
-        return Map.of("imported", importService.importFile(file, currentUser.get(principal)));
+    public Map<String, Integer> importExpenses(@RequestParam("file") MultipartFile file,
+                                               @RequestParam(defaultValue = "false") boolean allowDuplicates,
+                                               Principal principal) {
+        return Map.of("imported", importService.importFile(file, currentUser.get(principal), allowDuplicates));
     }
 
     @GetMapping("/import/template")

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api, { errorMessage } from '../api';
-import { canEditExpenses, useAuth } from '../auth';
+import { canEditExpenses } from '../roles';
+import { useAuth } from '../useAuth';
 import { compactAmount, formatAmount, formatDate, monthLabel } from '../format';
 import { Avatar, EmptyState, Loading, PageHeader, StatusPill } from '../components/ui';
 
@@ -9,7 +10,7 @@ function StatCard({ icon, tone, label, value, hint, to }) {
   const body = (
     <div className="card stat-card h-100">
       <div className="card-body">
-        <div className={`stat-icon bg-${tone}-subtle text-${tone}-emphasis`}><i className={`bi bi-${icon}`} /></div>
+        <div className={`stat-icon bg-${tone}-subtle text-${tone}-emphasis`}><i aria-hidden="true" className={`bi bi-${icon}`} /></div>
         <div className="min-w-0">
           <div className="stat-label">{label}</div>
           <div className="stat-value text-truncate">{value}</div>
@@ -61,7 +62,7 @@ export default function Dashboard() {
       title={`Hello, ${firstName}`}
       subtitle="Here is where company spending stands."
       actions={canEditExpenses(user) && (
-        <Link to="/expenses/new" className="btn btn-primary"><i className="bi bi-plus-lg" />Add Expense</Link>
+        <Link to="/expenses/new" className="btn btn-primary"><i aria-hidden="true" className="bi bi-plus-lg" />Add Expense</Link>
       )}
     />
   );
@@ -130,7 +131,7 @@ export default function Dashboard() {
       <div className="card">
         <div className="card-header d-flex justify-content-between align-items-center">
           <span>Recent expenses</span>
-          <Link to="/expenses" className="small fw-medium text-decoration-none">View all <i className="bi bi-arrow-right" /></Link>
+          <Link to="/expenses" className="small fw-medium text-decoration-none">View all <i aria-hidden="true" className="bi bi-arrow-right" /></Link>
         </div>
         {stats.recent.length === 0 ? (
           <EmptyState icon="receipt" title="No expenses yet">
