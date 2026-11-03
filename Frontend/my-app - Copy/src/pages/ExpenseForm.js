@@ -4,6 +4,7 @@ import api, { errorMessage } from '../api';
 import { useAuth } from '../auth';
 import { today } from '../format';
 import useDropdowns from '../useDropdowns';
+import { Avatar, Loading, PageHeader } from '../components/ui';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
@@ -115,19 +116,28 @@ export default function ExpenseForm() {
     }
   };
 
-  if (loading) return <div className="text-muted">Loading…</div>;
+  if (loading) return <Loading />;
 
   const field = (name) => `form-control${errors[name] ? ' is-invalid' : ''}`;
   const selectField = (name) => `form-select${errors[name] ? ' is-invalid' : ''}`;
 
-  return (
-    <div className="row justify-content-center">
-      <div className="col-lg-8">
-        <h1 className="h3 mb-3">{editing ? 'Edit Expense' : 'Add Expense'}</h1>
-        {listError && <div className="alert alert-warning">{listError}</div>}
-        {serverError && <div className="alert alert-danger">{serverError}</div>}
+  const fileLabel = file ? file.name : null;
 
-        <form className="card" onSubmit={handleSubmit} noValidate>
+  return (
+    <div className="mx-auto" style={{ maxWidth: 860 }}>
+      <PageHeader
+        title={editing ? 'Edit expense' : 'Add expense'}
+        subtitle={editing ? `Expense #${id}` : 'Fields marked * are required.'}
+        back={editing ? { to: `/expenses/${id}`, label: 'Back to expense' } : { to: '/expenses', label: 'Expenses' }}
+      />
+      {listError && <div className="alert alert-warning">{listError}</div>}
+      {serverError && (
+        <div className="alert alert-danger d-flex gap-2 align-items-center"><i className="bi bi-exclamation-circle" />{serverError}</div>
+      )}
+
+      <form onSubmit={handleSubmit} noValidate>
+        <div className="card mb-3">
+          <div className="card-header">Expense details</div>
           <div className="card-body row g-3">
             <div className="col-md-6">
               <label htmlFor="date" className="form-label">Date <span className="text-danger">*</span></label>
@@ -136,10 +146,13 @@ export default function ExpenseForm() {
               <div className="invalid-feedback">{errors.date}</div>
             </div>
             <div className="col-md-6">
-              <label htmlFor="amount" className="form-label">Amount (₹) <span className="text-danger">*</span></label>
-              <input id="amount" name="amount" inputMode="decimal" className={field('amount')} value={form.amount}
-                     placeholder="0.00" onChange={handleChange} required />
-              <div className="invalid-feedback">{errors.amount}</div>
+              <label htmlFor="amount" className="form-label">Amount <span className="text-danger">*</span></label>
+              <div className="input-group has-validation">
+                <span className="input-group-text">₹</span>
+                <input id="amount" name="amount" inputMode="decimal" className={field('amount')} value={form.amount}
+                       placeholder="0.00" onChange={handleChange} required />
+                <div className="invalid-feedback">{errors.amount}</div>
+              </div>
             </div>
 
             <div className="col-md-6">
@@ -152,20 +165,36 @@ export default function ExpenseForm() {
               <div className="invalid-feedback">{errors.categoryId}</div>
             </div>
             <div className="col-md-6">
-              <label htmlFor="reimbursementTypeId" className="form-label">Reimbursement type</label>
-              <select id="reimbursementTypeId" name="reimbursementTypeId" className="form-select"
-                      value={form.reimbursementTypeId} onChange={handleChange}>
-                <option value="">Not specified</option>
-                {reimbursementTypes.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-              </select>
-            </div>
-
-            <div className="col-md-6">
               <label htmlFor="paymentModeId" className="form-label">Payment mode</label>
               <select id="paymentModeId" name="paymentModeId" className="form-select" value={form.paymentModeId}
                       onChange={handleChange}>
                 <option value="">Not specified</option>
                 {paymentModes.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+
+            <div className="col-12">
+              <label htmlFor="description" className="form-label">Description / comments</label>
+              <textarea id="description" name="description" rows={3} className={field('description')}
+                        value={form.description} onChange={handleChange} maxLength={1000}
+                        placeholder="What was this expense for?" />
+              <div className="d-flex justify-content-between">
+                <div className="invalid-feedback d-block">{errors.description}</div>
+                <div className="form-text">{form.description.length}/1000</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card mb-3">
+          <div className="card-header">Reimbursement &amp; tax</div>
+          <div className="card-body row g-3">
+            <div className="col-md-6">
+              <label htmlFor="reimbursementTypeId" className="form-label">Reimbursement type</label>
+              <select id="reimbursementTypeId" name="reimbursementTypeId" className="form-select"
+                      value={form.reimbursementTypeId} onChange={handleChange}>
+                <option value="">Not specified</option>
+                {reimbursementTypes.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
             </div>
             <div className="col-md-6">
@@ -174,59 +203,59 @@ export default function ExpenseForm() {
                 {statuses.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
-
             <div className="col-12">
-              <div className="form-check">
-                <input id="taxApplicable" name="taxApplicable" type="checkbox" className="form-check-input"
+              <div className="form-check form-switch">
+                <input id="taxApplicable" name="taxApplicable" type="checkbox" role="switch" className="form-check-input"
                        checked={form.taxApplicable} onChange={handleChange} />
                 <label htmlFor="taxApplicable" className="form-check-label">Tax applicable (tax-deductible)</label>
               </div>
             </div>
-
-            <div className="col-12">
-              <label htmlFor="description" className="form-label">Description / comments</label>
-              <textarea id="description" name="description" rows={3} className={field('description')}
-                        value={form.description} onChange={handleChange} maxLength={1000}
-                        placeholder="Purpose or context of the expense" />
-              <div className="form-text text-end">{form.description.length}/1000</div>
-              <div className="invalid-feedback">{errors.description}</div>
-            </div>
-
-            <div className="col-12">
-              <label htmlFor="attachment" className="form-label">Receipt / invoice (PDF, JPG or PNG, up to 10 MB)</label>
-              {existing?.attachmentName && !removeAttachment && !file && (
-                <div className="mb-2 small">
-                  Current file: <strong>{existing.attachmentName}</strong>{' '}
-                  <button type="button" className="btn btn-link btn-sm p-0 text-danger"
-                          onClick={() => setRemoveAttachment(true)}>Remove</button>
-                </div>
-              )}
-              {removeAttachment && !file && (
-                <div className="mb-2 small text-danger">
-                  The current file will be removed when you save.{' '}
-                  <button type="button" className="btn btn-link btn-sm p-0" onClick={() => setRemoveAttachment(false)}>
-                    Undo
-                  </button>
-                </div>
-              )}
-              <input id="attachment" name="attachment" type="file" className={field('attachment')}
-                     accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" onChange={handleFile} />
-              <div className="invalid-feedback">{errors.attachment}</div>
-            </div>
-
-            <div className="col-md-6">
-              <label className="form-label">Entered by</label>
-              <input className="form-control" value={existing ? existing.enteredBy.name : user.name} disabled readOnly />
-            </div>
           </div>
-          <div className="card-footer bg-white d-flex justify-content-end gap-2">
-            <Link to={editing ? `/expenses/${id}` : '/expenses'} className="btn btn-outline-secondary">Cancel</Link>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? 'Saving…' : editing ? 'Save changes' : 'Submit expense'}
-            </button>
+        </div>
+
+        <div className="card mb-3">
+          <div className="card-header">Receipt</div>
+          <div className="card-body">
+            {existing?.attachmentName && !removeAttachment && !file && (
+              <div className="d-flex align-items-center gap-2 mb-3 p-2 rounded bg-body-tertiary">
+                <i className="bi bi-file-earmark-check text-success fs-5" />
+                <span className="text-truncate">{existing.attachmentName}</span>
+                <button type="button" className="btn btn-sm btn-link text-danger ms-auto" onClick={() => setRemoveAttachment(true)}>
+                  Remove
+                </button>
+              </div>
+            )}
+            {removeAttachment && !file && (
+              <div className="alert alert-warning py-2 small d-flex align-items-center gap-2">
+                The current receipt will be removed when you save.
+                <button type="button" className="btn btn-link btn-sm p-0 ms-auto" onClick={() => setRemoveAttachment(false)}>Undo</button>
+              </div>
+            )}
+            <label htmlFor="attachment" className={`d-block border border-2 rounded-3 text-center p-4 ${errors.attachment ? 'border-danger' : ''}`}
+                   style={{ borderStyle: 'dashed', cursor: 'pointer' }}>
+              <i className={`bi bi-${fileLabel ? 'file-earmark-check text-success' : 'cloud-arrow-up text-secondary'} fs-2 d-block mb-1`} />
+              <span className="fw-medium">{fileLabel || (existing?.attachmentName ? 'Replace receipt' : 'Upload a receipt or invoice')}</span>
+              <span className="d-block small text-secondary">PDF, JPG or PNG · up to 10 MB</span>
+            </label>
+            <input id="attachment" name="attachment" type="file" className="visually-hidden"
+                   accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" onChange={handleFile} />
+            {errors.attachment && <div className="text-danger small mt-2">{errors.attachment}</div>}
           </div>
-        </form>
-      </div>
+        </div>
+
+        <div className="d-flex flex-wrap align-items-center gap-3">
+          <span className="d-inline-flex align-items-center gap-2 text-secondary small me-auto">
+            Entered by <Avatar name={existing ? existing.enteredBy.name : user.name} size={22} />
+            <strong className="text-body">{existing ? existing.enteredBy.name : user.name}</strong>
+          </span>
+          <Link to={editing ? `/expenses/${id}` : '/expenses'} className="btn btn-outline-secondary">Cancel</Link>
+          <button type="submit" className="btn btn-primary px-4" disabled={saving}>
+            {saving
+              ? <><span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />Saving…</>
+              : editing ? 'Save changes' : 'Submit expense'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

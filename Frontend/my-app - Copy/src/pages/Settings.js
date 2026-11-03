@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import api, { errorMessage } from '../api';
 import useDropdowns from '../useDropdowns';
+import { ConfirmDialog, PageHeader } from '../components/ui';
 
 /** One editable dropdown list (add, rename, delete). */
-function ListEditor({ title, type, items, onChange }) {
+function ListEditor({ title, icon, type, items, onChange }) {
   const [newName, setNewName] = useState('');
   const [editId, setEditId] = useState(null);
   const [editName, setEditName] = useState('');
   const [error, setError] = useState('');
+  const [deleting, setDeleting] = useState(null);
 
   const run = async (action) => {
     setError('');
@@ -32,14 +34,18 @@ function ListEditor({ title, type, items, onChange }) {
     if (await run(() => api.put(`/settings/${type}/${editId}`, { name: editName }))) setEditId(null);
   };
 
-  const remove = (item) => {
-    if (window.confirm(`Delete "${item.name}"?`)) run(() => api.delete(`/settings/${type}/${item.id}`));
+  const remove = async () => {
+    await run(() => api.delete(`/settings/${type}/${deleting.id}`));
+    setDeleting(null);
   };
 
   return (
     <div className="col-lg-4">
       <div className="card h-100">
-        <div className="card-header bg-white fw-semibold">{title}</div>
+        <div className="card-header d-flex align-items-center gap-2">
+          <i className={`bi bi-${icon}`} />{title}
+          <span className="badge rounded-pill bg-secondary-subtle text-secondary-emphasis ms-auto">{items.length}</span>
+        </div>
         <ul className="list-group list-group-flush">
           {items.map((item) => (
             <li key={item.id} className="list-group-item">
@@ -55,11 +61,15 @@ function ListEditor({ title, type, items, onChange }) {
               ) : (
                 <div className="d-flex justify-content-between align-items-center">
                   <span>{item.name}</span>
-                  <span className="text-nowrap">
-                    <button className="btn btn-sm btn-link" onClick={() => { setEditId(item.id); setEditName(item.name); }}>
-                      Rename
+                  <span className="text-nowrap list-item-actions">
+                    <button className="btn btn-sm btn-link text-secondary btn-icon" aria-label={`Rename ${item.name}`} title="Rename"
+                            onClick={() => { setEditId(item.id); setEditName(item.name); }}>
+                      <i className="bi bi-pencil" />
                     </button>
-                    <button className="btn btn-sm btn-link text-danger" onClick={() => remove(item)}>Delete</button>
+                    <button className="btn btn-sm btn-link text-danger btn-icon" aria-label={`Delete ${item.name}`} title="Delete"
+                            onClick={() => setDeleting(item)}>
+                      <i className="bi bi-trash" />
+                    </button>
                   </span>
                 </div>
               )}
@@ -71,10 +81,15 @@ function ListEditor({ title, type, items, onChange }) {
           <form className="d-flex gap-2" onSubmit={add}>
             <input className="form-control form-control-sm" placeholder="New item" value={newName}
                    aria-label={`New ${title}`} onChange={(e) => setNewName(e.target.value)} maxLength={100} />
-            <button className="btn btn-sm btn-primary" disabled={!newName.trim()}>Add</button>
+            <button className="btn btn-sm btn-primary text-nowrap" disabled={!newName.trim()}><i className="bi bi-plus-lg" />Add</button>
           </form>
         </div>
       </div>
+      {deleting && (
+        <ConfirmDialog title={`Delete "${deleting.name}"?`} onConfirm={remove} onCancel={() => setDeleting(null)}>
+          It will no longer appear in the dropdown. Items already used by expenses cannot be deleted; rename them instead.
+        </ConfirmDialog>
+      )}
     </div>
   );
 }
@@ -84,13 +99,12 @@ export default function Settings() {
 
   return (
     <>
-      <h1 className="h3 mb-1">Settings</h1>
-      <p className="text-muted">Manage the dropdown lists used on the expense form. Items used by existing expenses can be renamed but not deleted.</p>
+      <PageHeader title="Settings" subtitle="Manage the dropdown lists used on the expense form." />
       {error && <div className="alert alert-danger">{error}</div>}
       <div className="row g-3">
-        <ListEditor title="Expense categories" type="categories" items={categories} onChange={reload} />
-        <ListEditor title="Payment modes" type="payment-modes" items={paymentModes} onChange={reload} />
-        <ListEditor title="Reimbursement types" type="reimbursement-types" items={reimbursementTypes} onChange={reload} />
+        <ListEditor title="Expense categories" icon="tags" type="categories" items={categories} onChange={reload} />
+        <ListEditor title="Payment modes" icon="credit-card" type="payment-modes" items={paymentModes} onChange={reload} />
+        <ListEditor title="Reimbursement types" icon="arrow-repeat" type="reimbursement-types" items={reimbursementTypes} onChange={reload} />
       </div>
     </>
   );

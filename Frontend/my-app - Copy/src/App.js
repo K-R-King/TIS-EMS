@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, RequireAuth, ROLES } from './auth';
-import NavBar from './components/NavBar';
+import { AuthProvider, RequireAuth, RequireRole, ROLES } from './auth';
+import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import ExpenseList from './pages/ExpenseList';
@@ -15,9 +15,10 @@ const ADMINS = [ROLES.SUPERADMIN, ROLES.ADMIN];
 /** Page chrome shared by every screen behind the login. */
 function Protected({ roles, children }) {
   return (
-    <RequireAuth roles={roles}>
-      <NavBar />
-      <main className="container py-4">{children}</main>
+    <RequireAuth>
+      <Layout>
+        <RequireRole roles={roles}>{children}</RequireRole>
+      </Layout>
     </RequireAuth>
   );
 }

@@ -64,21 +64,29 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
-/** Renders children only for logged-in users, optionally limited to some roles. */
-export function RequireAuth({ roles, children }) {
+/** Renders children only for logged-in users. */
+export function RequireAuth({ children }) {
   const { user, checking, loggedOut } = useAuth();
   const location = useLocation();
 
   if (checking) {
-    return <div className="text-center text-muted py-5">Loading…</div>;
+    return <div className="text-center text-secondary py-5">Loading…</div>;
   }
   if (!user) {
     return <Navigate to="/login" replace state={loggedOut ? null : { from: location }} />;
   }
+  return children;
+}
+
+/** Renders children only for the given roles (inside the page layout). */
+export function RequireRole({ roles, children }) {
+  const { user } = useAuth();
   if (roles && !roles.includes(user.role)) {
     return (
-      <div className="container py-5">
-        <div className="alert alert-warning">You do not have access to this page.</div>
+      <div className="container py-5" style={{ maxWidth: 560 }}>
+        <div className="alert alert-warning d-flex gap-2 align-items-center">
+          <i className="bi bi-shield-lock" />You do not have access to this page.
+        </div>
       </div>
     );
   }

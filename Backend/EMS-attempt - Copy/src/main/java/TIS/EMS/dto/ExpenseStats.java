@@ -10,6 +10,7 @@ public record ExpenseStats(
         long pendingCount,
         List<Group> byCategory,
         List<Group> byStatus,
+        List<Group> byMonth,   // last 6 months, oldest first, named YYYY-MM
         List<ExpenseResponse> recent
 ) {
     public record Group(String name, long count, BigDecimal total) {}

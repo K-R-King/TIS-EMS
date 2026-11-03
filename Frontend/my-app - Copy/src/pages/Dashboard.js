@@ -2,18 +2,43 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api, { errorMessage } from '../api';
 import { canEditExpenses, useAuth } from '../auth';
-import { formatAmount, formatDate, statusBadge } from '../format';
+import { compactAmount, formatAmount, formatDate, monthLabel } from '../format';
+import { Avatar, EmptyState, Loading, PageHeader, StatusPill } from '../components/ui';
 
-function StatCard({ label, value, hint }) {
-  return (
-    <div className="col-6 col-lg-3">
-      <div className="card stat-card h-100">
-        <div className="card-body">
-          <div className="text-muted small">{label}</div>
-          <div className="value">{value}</div>
-          {hint && <div className="text-muted small">{hint}</div>}
+function StatCard({ icon, tone, label, value, hint, to }) {
+  const body = (
+    <div className="card stat-card h-100">
+      <div className="card-body">
+        <div className={`stat-icon bg-${tone}-subtle text-${tone}-emphasis`}><i className={`bi bi-${icon}`} /></div>
+        <div className="min-w-0">
+          <div className="stat-label">{label}</div>
+          <div className="stat-value text-truncate">{value}</div>
+          {hint && <div className="stat-hint">{hint}</div>}
         </div>
       </div>
+    </div>
+  );
+  return (
+    <div className="col-6 col-xl-3">
+      {to ? <Link to={to} className="text-reset text-decoration-none d-block h-100">{body}</Link> : body}
+    </div>
+  );
+}
+
+function MonthChart({ months }) {
+  const max = Math.max(...months.map((m) => Number(m.total)), 1);
+  return (
+    <div className="month-chart" role="img"
+         aria-label={months.map((m) => `${monthLabel(m.name)}: ${formatAmount(m.total)}`).join(', ')}>
+      {months.map((m, i) => (
+        <div key={m.name} className={`month-col${i === months.length - 1 ? ' current' : ''}`}
+             title={`${monthLabel(m.name)}: ${formatAmount(m.total)} (${m.count})`}>
+          <div className="month-bar" style={{ height: `${(Number(m.total) / max) * 100}%` }}>
+            {Number(m.total) > 0 && <span className="tip">{compactAmount(m.total)}</span>}
+          </div>
+          <div className="month-label">{monthLabel(m.name)}</div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -30,90 +55,111 @@ export default function Dashboard() {
       .catch((err) => setError(errorMessage(err, 'Could not load dashboard.')));
   }, []);
 
-  if (error) return <div className="alert alert-danger">{error}</div>;
-  if (!stats) return <div className="text-muted">Loading…</div>;
+  const firstName = user.name.split(' ')[0];
+  const header = (
+    <PageHeader
+      title={`Hello, ${firstName}`}
+      subtitle="Here is where company spending stands."
+      actions={canEditExpenses(user) && (
+        <Link to="/expenses/new" className="btn btn-primary"><i className="bi bi-plus-lg" />Add Expense</Link>
+      )}
+    />
+  );
+
+  if (error) return <>{header}<div className="alert alert-danger">{error}</div></>;
+  if (!stats) return <>{header}<Loading /></>;
 
   const maxCategory = Math.max(...stats.byCategory.map((c) => Number(c.total)), 1);
+  const lastMonth = stats.byMonth[stats.byMonth.length - 2];
+  const change = lastMonth && Number(lastMonth.total) > 0
+    ? ((Number(stats.thisMonthAmount) - Number(lastMonth.total)) / Number(lastMonth.total)) * 100
+    : null;
 
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-        <h1 className="h3 mb-0">Dashboard</h1>
-        {canEditExpenses(user) && <Link to="/expenses/new" className="btn btn-primary">+ Add Expense</Link>}
-      </div>
+      {header}
 
       <div className="row g-3 mb-4">
-        <StatCard label="Total expenses" value={formatAmount(stats.totalAmount)} hint={`${stats.count} entries`} />
-        <StatCard label="This month" value={formatAmount(stats.thisMonthAmount)} />
-        <StatCard
-          label="Pending review"
-          value={<Link to="/expenses?status=Pending%20Review" className="text-reset">{stats.pendingCount}</Link>}
-        />
-        <StatCard label="Categories used" value={stats.byCategory.length} />
+        <StatCard icon="cash-stack" tone="primary" label="Total spend" value={formatAmount(stats.totalAmount)}
+                  hint={`${stats.count} expense${stats.count === 1 ? '' : 's'}`} />
+        <StatCard icon="calendar3" tone="info" label="This month" value={formatAmount(stats.thisMonthAmount)}
+                  hint={change === null ? 'No spend last month' : `${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(0)}% vs last month`} />
+        <StatCard icon="hourglass-split" tone="warning" label="Pending review" value={stats.pendingCount}
+                  hint="Click to review" to="/expenses?status=Pending%20Review" />
+        <StatCard icon="tags" tone="success" label="Categories used" value={stats.byCategory.length}
+                  hint={stats.byCategory[0] ? `Top: ${stats.byCategory[0].name}` : '—'} />
       </div>
 
-      <div className="row g-3">
+      <div className="row g-3 mb-3">
+        <div className="col-lg-7">
+          <div className="card h-100">
+            <div className="card-header">Monthly spend</div>
+            <div className="card-body d-flex flex-column">
+              <MonthChart months={stats.byMonth} />
+            </div>
+          </div>
+        </div>
         <div className="col-lg-5">
           <div className="card h-100">
-            <div className="card-header bg-white fw-semibold">Total by category</div>
+            <div className="card-header">By category</div>
             <div className="card-body">
-              {stats.byCategory.length === 0 && <p className="text-muted mb-0">No expenses yet.</p>}
+              {stats.byCategory.length === 0 && <EmptyState icon="pie-chart" title="No expenses yet" />}
               {stats.byCategory.map((c) => (
                 <div key={c.name} className="mb-3">
-                  <div className="d-flex justify-content-between small">
-                    <span>{c.name} <span className="text-muted">({c.count})</span></span>
+                  <div className="d-flex justify-content-between small mb-1">
+                    <span className="fw-medium">{c.name} <span className="text-secondary">· {c.count}</span></span>
                     <span className="fw-semibold">{formatAmount(c.total)}</span>
                   </div>
-                  <div className="progress" style={{ height: 8 }} role="presentation">
-                    <div className="progress-bar" style={{ width: `${(Number(c.total) / maxCategory) * 100}%` }} />
-                  </div>
+                  <div className="hbar"><span style={{ width: `${(Number(c.total) / maxCategory) * 100}%` }} /></div>
                 </div>
               ))}
               {stats.byStatus.length > 0 && (
-                <>
-                  <hr />
-                  <div className="d-flex flex-wrap gap-2">
-                    {stats.byStatus.map((s) => (
-                      <Link key={s.name} to={`/expenses?status=${encodeURIComponent(s.name)}`} className="text-decoration-none">
-                        <span className={statusBadge(s.name)}>{s.name}: {s.count}</span>
-                      </Link>
-                    ))}
-                  </div>
-                </>
+                <div className="d-flex flex-wrap gap-2 pt-2 border-top mt-3">
+                  {stats.byStatus.map((s) => (
+                    <Link key={s.name} to={`/expenses?status=${encodeURIComponent(s.name)}`} className="text-decoration-none mt-2">
+                      <StatusPill status={`${s.name}`} /> <span className="small text-secondary">{s.count}</span>
+                    </Link>
+                  ))}
+                </div>
               )}
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="col-lg-7">
-          <div className="card h-100">
-            <div className="card-header bg-white fw-semibold d-flex justify-content-between">
-              <span>Recent expenses</span>
-              <Link to="/expenses" className="small">View all</Link>
-            </div>
-            <div className="table-responsive">
-              <table className="table table-hover table-clickable mb-0 align-middle">
-                <thead>
-                  <tr><th>Date</th><th>Category</th><th>Entered by</th><th>Status</th><th className="text-end">Amount</th></tr>
-                </thead>
-                <tbody>
-                  {stats.recent.length === 0 && (
-                    <tr><td colSpan={5} className="text-muted">No expenses yet.</td></tr>
-                  )}
-                  {stats.recent.map((e) => (
-                    <tr key={e.id} onClick={() => navigate(`/expenses/${e.id}`)}>
-                      <td>{formatDate(e.date)}</td>
-                      <td>{e.category.name}</td>
-                      <td>{e.enteredBy.name}</td>
-                      <td><span className={statusBadge(e.status)}>{e.status}</span></td>
-                      <td className="text-end">{formatAmount(e.amount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+      <div className="card">
+        <div className="card-header d-flex justify-content-between align-items-center">
+          <span>Recent expenses</span>
+          <Link to="/expenses" className="small fw-medium text-decoration-none">View all <i className="bi bi-arrow-right" /></Link>
         </div>
+        {stats.recent.length === 0 ? (
+          <EmptyState icon="receipt" title="No expenses yet">
+            {canEditExpenses(user) ? <Link to="/expenses/new">Add the first one</Link> : 'Expenses will appear here once added.'}
+          </EmptyState>
+        ) : (
+          <div className="table-responsive">
+            <table className="table table-clickable align-middle">
+              <thead>
+                <tr><th>Date</th><th>Category</th><th>Entered by</th><th>Status</th><th className="text-end">Amount</th></tr>
+              </thead>
+              <tbody>
+                {stats.recent.map((e) => (
+                  <tr key={e.id} onClick={() => navigate(`/expenses/${e.id}`)}>
+                    <td className="text-nowrap">{formatDate(e.date)}</td>
+                    <td>{e.category.name}</td>
+                    <td>
+                      <span className="d-inline-flex align-items-center gap-2">
+                        <Avatar name={e.enteredBy.name} size={26} />{e.enteredBy.name}
+                      </span>
+                    </td>
+                    <td><StatusPill status={e.status} /></td>
+                    <td className="text-end fw-semibold text-nowrap">{formatAmount(e.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </>
   );

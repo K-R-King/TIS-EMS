@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import api, { errorMessage } from '../api';
 import { canEditExpenses, useAuth } from '../auth';
-import { formatAmount, formatDate, formatDateTime, statusBadge } from '../format';
+import { formatAmount, formatDate, formatDateTime } from '../format';
+import { Avatar, ConfirmDialog, EmptyState, Loading, PageHeader, StatusPill } from '../components/ui';
 
 /** Fetches the receipt with the session cookie and shows it inline. */
 function ReceiptPreview({ expense }) {
@@ -21,16 +22,18 @@ function ReceiptPreview({ expense }) {
   }, [expense.id]);
 
   if (error) return <div className="text-danger small">{error}</div>;
-  if (!url) return <div className="text-muted small">Loading receipt…</div>;
+  if (!url) return <Loading label="Loading receipt…" />;
 
   return (
     <>
       {expense.attachmentContentType === 'application/pdf'
         ? <iframe src={url} title="Receipt" className="receipt-preview-pdf" />
         : <img src={url} alt={`Receipt: ${expense.attachmentName}`} className="receipt-preview" />}
-      <div className="mt-2">
-        <a href={url} download={expense.attachmentName} className="btn btn-outline-secondary btn-sm">
-          Download {expense.attachmentName}
+      <div className="d-flex align-items-center gap-2 mt-3 small">
+        <i className="bi bi-file-earmark text-secondary" />
+        <span className="text-truncate">{expense.attachmentName}</span>
+        <a href={url} download={expense.attachmentName} className="btn btn-sm btn-outline-secondary ms-auto">
+          <i className="bi bi-download" />Download
         </a>
       </div>
     </>
@@ -38,6 +41,7 @@ function ReceiptPreview({ expense }) {
 }
 
 function Comments({ expenseId }) {
+  const { user } = useAuth();
   const [comments, setComments] = useState([]);
   const [text, setText] = useState('');
   const [error, setError] = useState('');
@@ -67,27 +71,37 @@ function Comments({ expenseId }) {
 
   return (
     <div className="card">
-      <div className="card-header bg-white fw-semibold">Review comments</div>
-      <ul className="list-group list-group-flush">
-        {comments.length === 0 && <li className="list-group-item text-muted">No comments yet.</li>}
-        {comments.map((c) => (
-          <li key={c.id} className="list-group-item">
-            <div className="small text-muted">
-              <strong className="text-body">{c.author.name}</strong> · {formatDateTime(c.createdAt)}
-            </div>
-            <div className="comment-text">{c.text}</div>
-          </li>
-        ))}
-      </ul>
+      <div className="card-header d-flex align-items-center gap-2">
+        <i className="bi bi-chat-left-text" />Review comments
+        {comments.length > 0 && <span className="badge rounded-pill bg-secondary-subtle text-secondary-emphasis">{comments.length}</span>}
+      </div>
       <div className="card-body">
-        {error && <div className="alert alert-danger py-2">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <label htmlFor="comment" className="visually-hidden">Add a comment</label>
-          <textarea id="comment" className="form-control mb-2" rows={2} maxLength={1000}
-                    placeholder="Add a comment" value={text} onChange={(e) => setText(e.target.value)} />
-          <button className="btn btn-primary btn-sm" disabled={posting || !text.trim()}>
-            {posting ? 'Posting…' : 'Add comment'}
-          </button>
+        {comments.length === 0 && <p className="text-secondary small mb-3">No comments yet. Managers and admins can leave notes here.</p>}
+        <div className="d-flex flex-column gap-3 mb-3">
+          {comments.map((c) => (
+            <div key={c.id} className="comment">
+              <Avatar name={c.author.name} size={32} />
+              <div className="min-w-0 flex-grow-1">
+                <div className="small">
+                  <strong>{c.author.name}</strong>
+                  <span className="text-secondary"> · {formatDateTime(c.createdAt)}</span>
+                </div>
+                <div className="comment-text">{c.text}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {error && <div className="alert alert-danger py-2 small">{error}</div>}
+        <form onSubmit={handleSubmit} className="comment">
+          <Avatar name={user.name} size={32} />
+          <div className="flex-grow-1">
+            <label htmlFor="comment" className="visually-hidden">Add a comment</label>
+            <textarea id="comment" className="form-control mb-2" rows={2} maxLength={1000}
+                      placeholder="Add a comment…" value={text} onChange={(e) => setText(e.target.value)} />
+            <button className="btn btn-primary btn-sm" disabled={posting || !text.trim()}>
+              {posting ? 'Posting…' : 'Add comment'}
+            </button>
+          </div>
         </form>
       </div>
     </div>
@@ -101,6 +115,7 @@ export default function ExpenseDetails() {
   const location = useLocation();
   const [expense, setExpense] = useState(null);
   const [error, setError] = useState('');
+  const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
@@ -111,7 +126,6 @@ export default function ExpenseDetails() {
   }, [id]);
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete this expense and its receipt? This cannot be undone.')) return;
     setDeleting(true);
     try {
       await api.delete(`/expenses/${id}`);
@@ -119,77 +133,88 @@ export default function ExpenseDetails() {
     } catch (err) {
       setError(errorMessage(err, 'Could not delete expense.'));
       setDeleting(false);
+      setConfirming(false);
     }
   };
 
-  if (error && !expense) return <div className="alert alert-danger">{error}</div>;
-  if (!expense) return <div className="text-muted">Loading…</div>;
+  const back = { to: '/expenses', label: 'Expenses' };
+  if (error && !expense) return <><PageHeader title="Expense" back={back} /><div className="alert alert-danger">{error}</div></>;
+  if (!expense) return <Loading />;
 
   const rows = [
     ['Date', formatDate(expense.date)],
-    ['Amount', formatAmount(expense.amount)],
-    ['Expense category', expense.category.name],
+    ['Category', expense.category.name],
+    ['Payment mode', expense.paymentMode?.name || '—'],
     ['Reimbursement type', expense.reimbursementType?.name || '—'],
     ['Tax applicable', expense.taxApplicable ? 'Yes' : 'No'],
-    ['Payment mode', expense.paymentMode?.name || '—'],
-    ['Description / comments', expense.description || '—'],
-    ['Entered by', `${expense.enteredBy.name} (${expense.enteredBy.username})`],
-    ['Status', <span className={statusBadge(expense.status)}>{expense.status}</span>],
-    ['Created', formatDateTime(expense.createdAt)],
-    ['Last updated', formatDateTime(expense.updatedAt)],
+    ['Description', expense.description || '—'],
   ];
 
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <div>
-          <Link to="/expenses" className="small">← Back to expenses</Link>
-          <h1 className="h3 mb-0">Expense #{expense.id}</h1>
-        </div>
-        {canEditExpenses(user) && (
-          <div className="d-flex gap-2">
-            <Link to={`/expenses/${id}/edit`} className="btn btn-outline-primary">Edit</Link>
-            <button className="btn btn-outline-danger" onClick={handleDelete} disabled={deleting}>
-              {deleting ? 'Deleting…' : 'Delete'}
-            </button>
-          </div>
+      <PageHeader
+        title={`Expense #${expense.id}`}
+        back={back}
+        actions={canEditExpenses(user) && (
+          <>
+            <Link to={`/expenses/${id}/edit`} className="btn btn-outline-primary"><i className="bi bi-pencil" />Edit</Link>
+            <button className="btn btn-outline-danger" onClick={() => setConfirming(true)}><i className="bi bi-trash" />Delete</button>
+          </>
         )}
-      </div>
+      />
 
       {location.state?.saved && (
-        <div className="alert alert-success">
+        <div className="alert alert-success d-flex gap-2 align-items-center">
+          <i className="bi bi-check-circle" />
           Expense {location.state.saved}.{location.state.saved === 'created' && ' It is now pending review.'}
         </div>
       )}
       {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="row g-3">
-        <div className="col-lg-6">
-          <div className="card mb-3">
+        <div className="col-lg-6 d-flex flex-column gap-3">
+          <div className="card">
             <div className="card-body">
-              <dl className="row mb-0">
+              <div className="d-flex justify-content-between align-items-start gap-2 mb-1">
+                <div className="amount-hero">{formatAmount(expense.amount)}</div>
+                <StatusPill status={expense.status} />
+              </div>
+              <div className="d-flex align-items-center gap-2 text-secondary small mb-4">
+                <Avatar name={expense.enteredBy.name} size={22} />
+                Entered by <strong className="text-body">{expense.enteredBy.name}</strong> · {formatDateTime(expense.createdAt)}
+              </div>
+              <dl className="detail-list">
                 {rows.map(([label, value]) => (
                   <React.Fragment key={label}>
-                    <dt className="col-sm-5 text-muted fw-normal">{label}</dt>
-                    <dd className="col-sm-7 comment-text">{value}</dd>
+                    <dt>{label}</dt>
+                    <dd>{value}</dd>
                   </React.Fragment>
                 ))}
               </dl>
+              {expense.updatedAt !== expense.createdAt && (
+                <div className="text-secondary small mt-4">Last updated {formatDateTime(expense.updatedAt)}</div>
+              )}
             </div>
           </div>
           <Comments expenseId={expense.id} />
         </div>
         <div className="col-lg-6">
           <div className="card">
-            <div className="card-header bg-white fw-semibold">Receipt</div>
+            <div className="card-header d-flex align-items-center gap-2"><i className="bi bi-paperclip" />Receipt</div>
             <div className="card-body">
               {expense.attachmentName
                 ? <ReceiptPreview expense={expense} />
-                : <p className="text-muted mb-0">No receipt was uploaded.</p>}
+                : <EmptyState icon="file-earmark-x" title="No receipt uploaded" />}
             </div>
           </div>
         </div>
       </div>
+
+      {confirming && (
+        <ConfirmDialog title="Delete this expense?" busy={deleting} onConfirm={handleDelete} onCancel={() => setConfirming(false)}>
+          Expense #{expense.id} ({formatAmount(expense.amount)}), its receipt and comments will be permanently deleted.
+        </ConfirmDialog>
+      )}
     </>
   );
 }

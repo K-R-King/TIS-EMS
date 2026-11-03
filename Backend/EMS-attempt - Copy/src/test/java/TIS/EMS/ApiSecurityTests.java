@@ -197,6 +197,16 @@ class ApiSecurityTests {
     }
 
     @Test
+    void statsIncludeTheLastSixMonths() throws Exception {
+        createExpenseAsAdmin();
+        mvc.perform(get("/api/expenses/stats").with(as("t-manager")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.byMonth", hasSize(6)))
+                .andExpect(jsonPath("$.byMonth[5].name").value(java.time.YearMonth.now().toString()))
+                .andExpect(jsonPath("$.byMonth[5].count").value(greaterThan(0)));
+    }
+
+    @Test
     void categoryInUseCannotBeDeleted() throws Exception {
         createExpenseAsAdmin();
         mvc.perform(delete("/api/settings/categories/" + categoryId).with(as("t-super")))

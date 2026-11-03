@@ -106,6 +106,7 @@ public class ExpenseController {
                 all.stream().filter(e -> ExpenseStatus.PENDING_REVIEW.equals(e.getStatus())).count(),
                 group(all, e -> e.getCategory().getName()),
                 group(all, Expense::getStatus),
+                lastMonths(all, thisMonth, 6),
                 expenseRepository.findTop5ByOrderByDateDescIdDesc().stream().map(ExpenseResponse::from).toList());
     }
 
@@ -252,6 +253,18 @@ public class ExpenseController {
                 .map(e -> new ExpenseStats.Group(e.getKey(), e.getValue().size(), sum(e.getValue())))
                 .sorted(Comparator.comparing(ExpenseStats.Group::total).reversed())
                 .toList();
+    }
+
+    private static List<ExpenseStats.Group> lastMonths(List<Expense> expenses, YearMonth current, int months) {
+        Map<YearMonth, List<Expense>> byMonth = expenses.stream()
+                .collect(Collectors.groupingBy(e -> YearMonth.from(e.getDate())));
+        List<ExpenseStats.Group> result = new ArrayList<>();
+        for (int i = months - 1; i >= 0; i--) {
+            YearMonth month = current.minusMonths(i);
+            List<Expense> inMonth = byMonth.getOrDefault(month, List.of());
+            result.add(new ExpenseStats.Group(month.toString(), inMonth.size(), sum(inMonth)));
+        }
+        return result;
     }
 
     private static ResponseStatusException badRequest(String message) {

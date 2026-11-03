@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import api, { errorMessage } from '../api';
-import { ROLE_LABELS, useAuth } from '../auth';
+import { ROLE_LABELS, ROLES, useAuth } from '../auth';
+import { Avatar, ConfirmDialog, Loading, PageHeader } from '../components/ui';
+
+const ROLE_TONES = { [ROLES.SUPERADMIN]: 'primary', [ROLES.ADMIN]: 'info', [ROLES.MANAGER]: 'secondary' };
 
 const EMPTY = { name: '', username: '', password: '', role: 'MANAGER' };
 
@@ -36,7 +39,7 @@ function UserForm({ initial, onSaved, onCancel }) {
 
   return (
     <form className="card mb-3" onSubmit={handleSubmit}>
-      <div className="card-header bg-white fw-semibold">{editing ? `Edit ${initial.username}` : 'Add user'}</div>
+      <div className="card-header">{editing ? `Edit ${initial.username}` : 'Add user'}</div>
       <div className="card-body row g-3">
         <div className="col-md-6">
           <label htmlFor="u-name" className="form-label">Full name</label>
@@ -63,7 +66,7 @@ function UserForm({ initial, onSaved, onCancel }) {
         </div>
         {error && <div className="col-12"><div className="alert alert-danger py-2 mb-0">{error}</div></div>}
       </div>
-      <div className="card-footer bg-white d-flex justify-content-end gap-2">
+      <div className="card-footer d-flex justify-content-end gap-2">
         <button type="button" className="btn btn-outline-secondary" onClick={onCancel}>Cancel</button>
         <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
       </div>
@@ -73,8 +76,10 @@ function UserForm({ initial, onSaved, onCancel }) {
 
 export default function Users() {
   const { user: me } = useAuth();
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState(null);
   const [editing, setEditing] = useState(null); // null, {} for new, or a user
+  const [deleting, setDeleting] = useState(null);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -84,6 +89,8 @@ export default function Users() {
       .catch((err) => setError(errorMessage(err, 'Could not load users.')));
   }, []);
 
+  const startEdit = (u) => { setEditing(u); setNotice(''); setError(''); };
+
   const handleSaved = (saved, wasEdit) => {
     setUsers((list) => (wasEdit ? list.map((u) => (u.id === saved.id ? saved : u)) : [...list, saved])
       .sort((a, b) => a.username.localeCompare(b.username)));
@@ -91,57 +98,83 @@ export default function Users() {
     setNotice(`${saved.username} ${wasEdit ? 'updated' : 'added'}.`);
   };
 
-  const handleDelete = async (u) => {
-    if (!window.confirm(`Delete user ${u.username}?`)) return;
+  const handleDelete = async () => {
+    setBusy(true);
     setError('');
     setNotice('');
     try {
-      await api.delete(`/users/${u.id}`);
-      setUsers((list) => list.filter((x) => x.id !== u.id));
-      setNotice(`${u.username} deleted.`);
+      await api.delete(`/users/${deleting.id}`);
+      setUsers((list) => list.filter((x) => x.id !== deleting.id));
+      setNotice(`${deleting.username} deleted.`);
     } catch (err) {
       setError(errorMessage(err, 'Could not delete user.'));
+    } finally {
+      setBusy(false);
+      setDeleting(null);
     }
   };
 
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h1 className="h3 mb-0">User Management</h1>
-        {!editing && <button className="btn btn-primary" onClick={() => { setEditing({}); setNotice(''); }}>+ Add user</button>}
-      </div>
+      <PageHeader
+        title="Users"
+        subtitle="Add people and choose what they can do."
+        actions={!editing && <button className="btn btn-primary" onClick={() => startEdit({})}><i className="bi bi-person-plus" />Add user</button>}
+      />
 
       {error && <div className="alert alert-danger">{error}</div>}
-      {notice && <div className="alert alert-success">{notice}</div>}
+      {notice && <div className="alert alert-success d-flex gap-2 align-items-center"><i className="bi bi-check-circle" />{notice}</div>}
 
       {editing && (
         <UserForm key={editing.id || 'new'} initial={editing} onSaved={handleSaved} onCancel={() => setEditing(null)} />
       )}
 
       <div className="card">
-        <div className="table-responsive">
-          <table className="table mb-0 align-middle">
-            <thead><tr><th>Name</th><th>Username</th><th>Role</th><th /></tr></thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id}>
-                  <td>{u.name}</td>
-                  <td>{u.username}{u.id === me.id && <span className="text-muted small"> (you)</span>}</td>
-                  <td>{ROLE_LABELS[u.role] || u.role}</td>
-                  <td className="text-end text-nowrap">
-                    <button className="btn btn-sm btn-outline-primary me-2"
-                            onClick={() => { setEditing(u); setNotice(''); setError(''); }}>Edit</button>
-                    <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(u)}
-                            disabled={u.id === me.id} title={u.id === me.id ? 'You cannot delete your own account' : ''}>
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {users === null && !error && <Loading />}
+        {users && (
+          <div className="table-responsive">
+            <table className="table align-middle">
+              <thead><tr><th>Name</th><th>Username</th><th>Role</th><th /></tr></thead>
+              <tbody>
+                {users.map((u) => {
+                  const tone = ROLE_TONES[u.role] || 'secondary';
+                  return (
+                    <tr key={u.id}>
+                      <td>
+                        <span className="d-inline-flex align-items-center gap-2 fw-medium">
+                          <Avatar name={u.name} size={32} />{u.name}
+                          {u.id === me.id && <span className="badge rounded-pill bg-body-tertiary text-secondary border">You</span>}
+                        </span>
+                      </td>
+                      <td className="text-secondary">{u.username}</td>
+                      <td>
+                        <span className={`badge rounded-pill bg-${tone}-subtle text-${tone}-emphasis border border-${tone}-subtle`}>
+                          {ROLE_LABELS[u.role] || u.role}
+                        </span>
+                      </td>
+                      <td className="text-end text-nowrap">
+                        <button className="btn btn-sm btn-outline-secondary btn-icon me-2" onClick={() => startEdit(u)}
+                                aria-label={`Edit ${u.username}`} title="Edit"><i className="bi bi-pencil" /></button>
+                        <button className="btn btn-sm btn-outline-danger btn-icon" onClick={() => setDeleting(u)}
+                                disabled={u.id === me.id} aria-label={`Delete ${u.username}`}
+                                title={u.id === me.id ? 'You cannot delete your own account' : 'Delete'}>
+                          <i className="bi bi-trash" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+
+      {deleting && (
+        <ConfirmDialog title={`Delete ${deleting.username}?`} busy={busy} onConfirm={handleDelete} onCancel={() => setDeleting(null)}>
+          They will no longer be able to log in. Users who have entered expenses or comments are kept for the audit trail.
+        </ConfirmDialog>
+      )}
     </>
   );
 }
