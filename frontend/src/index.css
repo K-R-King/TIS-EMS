@@ -1,45 +1,60 @@
-/* ---------- Theme tokens (Bootstrap 5.3 variables, light + dark) ---------- */
+/* ---------- Theme tokens: TechIntello brand (techintello.com), light + dark ---------- */
 :root,
 [data-bs-theme='light'] {
-  --brand: #4f46e5;
-  --brand-rgb: 79, 70, 229;
-  --brand-hover: #4338ca;
-  --brand-soft: #eef2ff;
-  --sidebar-bg: #0f172a;
-  --sidebar-fg: #cbd5e1;
-  --sidebar-muted: #64748b;
-  --sidebar-active: rgba(255, 255, 255, 0.08);
-  --surface: #ffffff;
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+  /* Brand palette */
+  --ti-navy: #0b2035;        /* site header and dark sections */
+  --ti-navy-deep: #062a3a;   /* end of the site's hero gradient */
+  --ti-sky: #30a9de;         /* site buttons and active links; accents only (low contrast with white text) */
+  --ti-royal: #2c489c;       /* logo mark */
+  --ti-mist: #f6fcff;        /* site's light section background */
 
-  --bs-body-bg: #f5f7fb;
-  --bs-body-color: #1e293b;
-  --bs-border-color: #e5e9f0;
+  /* Roles */
+  --brand: #1b7ca7;          /* sky blue darkened to pass WCAG AA with white text */
+  --brand-rgb: 27, 124, 167;
+  --brand-hover: #156a90;
+  --brand-soft: #e3f3fb;
+  --accent: var(--ti-sky);
+  --accent-rgb: 48, 169, 222;
+  --sidebar-bg: var(--ti-navy);
+  --sidebar-fg: #c9d6e3;
+  --sidebar-muted: #7f97ad;
+  --sidebar-active: rgba(48, 169, 222, 0.14);
+  --surface: #ffffff;
+  --shadow-sm: 0 1px 2px rgba(11, 32, 53, 0.06), 0 2px 8px rgba(11, 32, 53, 0.04);
+  --heading-font: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --bs-body-bg: var(--ti-mist);
+  --bs-body-color: #1d2b3a;
+  --bs-secondary-color: #54595f; /* site body text grey */
+  --bs-border-color: #e1e9f0;
   --bs-primary: var(--brand);
   --bs-primary-rgb: var(--brand-rgb);
   --bs-link-color: var(--brand);
   --bs-link-color-rgb: var(--brand-rgb);
   --bs-link-hover-color: var(--brand-hover);
-  --bs-body-font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --bs-border-radius: 0.5rem;
-  --bs-border-radius-lg: 0.75rem;
+  --bs-body-font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --bs-body-font-size: 0.9375rem;
+  --bs-border-radius: 0.625rem;
+  --bs-border-radius-lg: 1rem;
+  --bs-focus-ring-color: rgba(var(--accent-rgb), 0.35);
 }
 
 [data-bs-theme='dark'] {
-  --brand: #818cf8;
-  --brand-rgb: 129, 140, 248;
-  --brand-hover: #a5b4fc;
-  --brand-soft: rgba(129, 140, 248, 0.14);
-  --sidebar-bg: #0b1120;
-  --sidebar-active: rgba(255, 255, 255, 0.07);
-  --surface: #151c2c;
+  --brand: var(--ti-sky);    /* bright enough for navy text on buttons (6.2:1) */
+  --brand-rgb: 48, 169, 222;
+  --brand-hover: #5bbde6;
+  --brand-soft: rgba(48, 169, 222, 0.14);
+  --sidebar-bg: #051521;
+  --sidebar-active: rgba(48, 169, 222, 0.16);
+  --surface: #0e2639;
   --shadow-sm: none;
 
-  --bs-body-bg: #0e1424;
-  --bs-body-color: #e2e8f0;
-  --bs-border-color: #263045;
-  --bs-secondary-bg: #1b2335;
-  --bs-tertiary-bg: #182031;
+  --bs-body-bg: #071b2b;
+  --bs-body-color: #e3edf5;
+  --bs-secondary-color: #9fb3c5;
+  --bs-border-color: #1e3c55;
+  --bs-secondary-bg: #12304a;
+  --bs-tertiary-bg: #0b2235;
   --bs-primary: var(--brand);
   --bs-primary-rgb: var(--brand-rgb);
   --bs-link-color: var(--brand);
@@ -49,9 +64,38 @@
 
 body {
   background: var(--bs-body-bg);
-  font-feature-settings: 'cv11', 'tnum';
   -webkit-font-smoothing: antialiased;
 }
+
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+  font-family: var(--heading-font);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Small outlined uppercase label, as on techintello.com ("ELEVATING POSSIBILITIES") */
+.eyebrow {
+  display: inline-block;
+  padding: 0.3rem 0.9rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--brand);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* The logo always sits on white, like the site's white header card over navy */
+.logo-card {
+  display: inline-flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 0.75rem;
+  padding: 0.55rem 0.8rem;
+  text-decoration: none;
+}
+.logo-card img { display: block; height: auto; }
 
 /* ---------- Bootstrap component overrides ---------- */
 .btn-primary {
@@ -69,10 +113,14 @@ body {
   --bs-btn-disabled-color: #fff;
 }
 [data-bs-theme='dark'] .btn-primary {
-  --bs-btn-color: #0b1120;
-  --bs-btn-hover-color: #0b1120;
-  --bs-btn-active-color: #0b1120;
-  --bs-btn-disabled-color: #0b1120;
+  --bs-btn-color: var(--ti-navy);
+  --bs-btn-hover-color: var(--ti-navy);
+  --bs-btn-active-color: var(--ti-navy);
+  --bs-btn-disabled-color: var(--ti-navy);
+}
+[data-bs-theme='dark'] .btn-outline-primary {
+  --bs-btn-hover-color: var(--ti-navy);
+  --bs-btn-active-color: var(--ti-navy);
 }
 .btn-outline-primary {
   --bs-btn-color: var(--brand);
@@ -82,21 +130,27 @@ body {
   --bs-btn-active-bg: var(--brand);
   --bs-btn-active-border-color: var(--brand);
 }
-.btn { font-weight: 500; }
+.btn { font-weight: 500; border-radius: var(--bs-border-radius); }
+.btn-sm { border-radius: 0.5rem; }
 .btn .bi { margin-right: 0.35rem; }
 .btn-icon .bi { margin-right: 0; }
 
 .form-control:focus,
 .form-select:focus,
 .form-check-input:focus {
-  border-color: rgba(var(--brand-rgb), 0.6);
-  box-shadow: 0 0 0 0.2rem rgba(var(--brand-rgb), 0.18);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 0.2rem rgba(var(--accent-rgb), 0.22);
 }
 .form-check-input:checked {
   background-color: var(--brand);
   border-color: var(--brand);
 }
-.form-label { font-weight: 500; font-size: 0.875rem; }
+.form-label { font-weight: 500; font-size: 0.85rem; }
+/* Inputs are white on the white cards (Bootstrap would use the tinted page background) */
+.form-control,
+.form-select { background-color: var(--surface); }
+.form-control:disabled,
+.form-control[readonly] { background-color: var(--bs-tertiary-bg); }
 
 .card {
   --bs-card-bg: var(--surface);
@@ -106,6 +160,7 @@ body {
   box-shadow: var(--shadow-sm);
 }
 .card-header {
+  font-family: var(--heading-font);
   font-weight: 600;
   padding-top: 0.9rem;
   padding-bottom: 0.9rem;
@@ -160,23 +215,20 @@ body {
 }
 .sidebar-brand {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 0.6rem;
-  color: #fff;
-  font-weight: 700;
-  font-size: 1.05rem;
   text-decoration: none;
-  padding: 0 0.5rem 1.5rem;
+  padding: 0 0.25rem 1.5rem;
 }
-.brand-mark {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #fff;
-  font-size: 1.05rem;
+.sidebar-brand .logo-card img { width: 150px; }
+.sidebar-brand .app-name {
+  color: var(--ti-sky);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding-left: 0.2rem;
 }
 .sidebar-section {
   font-size: 0.68rem;
@@ -187,6 +239,7 @@ body {
   padding: 1rem 0.75rem 0.4rem;
 }
 .sidebar-link {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -199,8 +252,18 @@ body {
 }
 .sidebar-link .bi { font-size: 1.05rem; opacity: 0.85; }
 .sidebar-link:hover { color: #fff; background: var(--sidebar-active); }
-.sidebar-link.active { color: #fff; background: rgba(99, 102, 241, 0.22); }
-.sidebar-link.active .bi { color: #a5b4fc; opacity: 1; }
+.sidebar-link.active { color: #fff; background: var(--sidebar-active); }
+.sidebar-link.active::before {
+  content: '';
+  position: absolute;
+  left: -0.875rem;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--ti-sky);
+}
+.sidebar-link.active .bi { color: var(--ti-sky); opacity: 1; }
 
 .sidebar-footer {
   margin-top: auto;
@@ -254,6 +317,9 @@ body {
     padding: 0.6rem 1rem;
   }
   .topbar .sidebar-brand { padding: 0; }
+  .topbar .sidebar-brand .logo-card { padding: 0.35rem 0.6rem; border-radius: 0.6rem; }
+  .topbar .sidebar-brand .logo-card img { width: 110px; }
+  .topbar .sidebar-brand .app-name { display: none; }
   .topbar .btn { color: #fff; font-size: 1.4rem; line-height: 1; padding: 0.25rem 0.4rem; }
   .app-content { padding: 1.25rem 1rem 2.5rem; }
 }
@@ -267,7 +333,7 @@ body {
   gap: 1rem;
   margin-bottom: 1.5rem;
 }
-.page-header h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+.page-header h1 { font-size: 1.65rem; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
 .page-header .subtitle { color: var(--bs-secondary-color); margin: 0.25rem 0 0; }
 .back-link { font-size: 0.875rem; text-decoration: none; display: inline-flex; gap: 0.35rem; margin-bottom: 0.35rem; }
 
@@ -311,12 +377,12 @@ body {
   flex-shrink: 0;
 }
 .stat-label { color: var(--bs-secondary-color); font-size: 0.82rem; font-weight: 500; }
-.stat-value { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; }
+.stat-value { font-family: var(--heading-font); font-size: 1.45rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1.3; }
 .stat-hint { color: var(--bs-secondary-color); font-size: 0.78rem; }
 
 /* Bars */
 .hbar { height: 8px; border-radius: 999px; background: var(--bs-tertiary-bg); overflow: hidden; }
-.hbar > span { display: block; height: 100%; border-radius: 999px; background: var(--brand); }
+.hbar > span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--brand), var(--ti-sky)); }
 
 .month-chart { display: flex; align-items: flex-end; gap: 0.75rem; flex: 1; min-height: 200px; padding-top: 1.75rem; }
 .month-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
@@ -324,11 +390,11 @@ body {
   width: 100%;
   max-width: 44px;
   border-radius: 6px 6px 2px 2px;
-  background: rgba(var(--brand-rgb), 0.28);
+  background: rgba(var(--accent-rgb), 0.3);
   min-height: 3px;
   position: relative;
 }
-.month-col.current .month-bar { background: var(--brand); }
+.month-col.current .month-bar { background: linear-gradient(180deg, var(--ti-sky), var(--brand)); }
 .month-bar .tip {
   position: absolute;
   bottom: calc(100% + 4px);
@@ -350,7 +416,7 @@ body {
 .detail-list { display: grid; grid-template-columns: minmax(140px, 38%) 1fr; row-gap: 0.85rem; column-gap: 1rem; margin: 0; }
 .detail-list dt { color: var(--bs-secondary-color); font-weight: 500; font-size: 0.875rem; }
 .detail-list dd { margin: 0; white-space: pre-wrap; word-break: break-word; }
-.amount-hero { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
+.amount-hero { font-family: var(--heading-font); font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; }
 
 .receipt-preview {
   max-width: 100%;
@@ -369,21 +435,29 @@ body {
 .comment { display: flex; gap: 0.75rem; }
 .comment-text { white-space: pre-wrap; word-break: break-word; }
 
-/* Login */
-.login-page { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
+/* Login: the site's navy hero (sky glow fading into deep navy) */
+.login-page { min-height: 100vh; display: grid; grid-template-columns: 1.05fr 1fr; }
 .login-brand {
-  background: linear-gradient(150deg, #1e1b4b 0%, #312e81 45%, #4f46e5 100%);
-  color: #e0e7ff;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(48, 169, 222, 0.35), transparent 55%),
+    linear-gradient(180deg, rgba(39, 141, 185, 0.32) 0%, var(--ti-navy-deep) 100%),
+    var(--ti-navy);
+  color: #d6e4ef;
   padding: 3rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
 }
-.login-brand h2 { color: #fff; font-weight: 700; letter-spacing: -0.02em; font-size: 2rem; max-width: 26rem; }
+.login-brand .logo-card { padding: 0.8rem 1.1rem; border-radius: 1rem; }
+.login-brand .logo-card img { width: 190px; }
+.login-brand .eyebrow { border-color: var(--ti-sky); color: var(--ti-sky); }
+.login-brand h2 { color: #fff; font-weight: 600; letter-spacing: -0.02em; font-size: 2.4rem; line-height: 1.2; max-width: 28rem; }
 .login-brand li { display: flex; gap: 0.75rem; margin-bottom: 0.9rem; }
-.login-brand li .bi { color: #a5b4fc; font-size: 1.15rem; }
+.login-brand li .bi { color: var(--ti-sky); font-size: 1.15rem; }
 .login-form-wrap { display: grid; place-items: center; padding: 2rem 1rem; }
 .login-form { width: 100%; max-width: 380px; }
+.login-form .logo-card { padding: 0; }
+.login-form .logo-card img { width: 170px; }
 @media (max-width: 991.98px) {
   .login-page { grid-template-columns: 1fr; }
   .login-brand { display: none; }

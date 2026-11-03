@@ -1,6 +1,6 @@
 {
-  "short_name": "TIS Expenses",
-  "name": "TIS Expense Management",
+  "short_name": "TI Expenses",
+  "name": "TechIntello Expense Management",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +20,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#4f46e5",
-  "background_color": "#f5f7fb"
+  "theme_color": "#0b2035",
+  "background_color": "#f6fcff"
 }

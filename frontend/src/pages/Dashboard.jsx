@@ -59,6 +59,7 @@ export default function Dashboard() {
   const firstName = user.name.split(' ')[0];
   const header = (
     <PageHeader
+      eyebrow="TechIntello Solutions"
       title={`Hello, ${firstName}`}
       subtitle="Here is where company spending stands."
       actions={canEditExpenses(user) && (

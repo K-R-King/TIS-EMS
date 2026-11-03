@@ -45,11 +45,11 @@ export default function Login() {
   return (
     <div className="login-page">
       <section className="login-brand">
-        <div className="d-flex align-items-center gap-2 fw-bold text-white fs-5">
-          <span className="brand-mark"><i aria-hidden="true" className="bi bi-wallet2" /></span>
-          TIS Expenses
+        <div>
+          <span className="logo-card"><img src="/brand/techintello-logo.png" alt="TechIntello Solutions" /></span>
         </div>
         <div>
+          <span className="eyebrow mb-3">Expense Management</span>
           <h2 className="mb-4">Track, review and reimburse company expenses.</h2>
           <ul className="list-unstyled mb-0">
             {FEATURES.map(([icon, text]) => (
@@ -57,14 +57,13 @@ export default function Login() {
             ))}
           </ul>
         </div>
-        <div className="small opacity-75">TechIntello internal tool</div>
+        <div className="small opacity-75">TechIntello Solutions · internal tool</div>
       </section>
 
       <section className="login-form-wrap">
         <form className="login-form" onSubmit={handleSubmit} noValidate>
-          <div className="d-lg-none d-flex align-items-center gap-2 fw-bold fs-5 mb-4">
-            <span className="brand-mark"><i aria-hidden="true" className="bi bi-wallet2" /></span>
-            TIS Expenses
+          <div className="d-lg-none mb-4">
+            <span className="logo-card"><img src="/brand/techintello-logo.png" alt="TechIntello Solutions" /></span>
           </div>
           <h1 className="h3 fw-bold mb-1">Welcome back</h1>
           <p className="text-secondary mb-4">Sign in with your company account.</p>

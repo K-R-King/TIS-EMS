@@ -15,7 +15,8 @@ export function StatusPill({ status }) {
   );
 }
 
-const AVATAR_COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#ec4899'];
+// TechIntello blues first, then distinct hues so people stay easy to tell apart (all readable with white initials)
+const AVATAR_COLORS = ['#1b7ca7', '#2c489c', '#0f766e', '#b45309', '#be123c', '#6d28d9', '#0e7490', '#4d7c0f'];
 
 export function Avatar({ name = '?', size = 32 }) {
   const initials = name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('') || '?';
@@ -27,13 +28,14 @@ export function Avatar({ name = '?', size = 32 }) {
   );
 }
 
-export function PageHeader({ title, subtitle, back, actions }) {
+export function PageHeader({ eyebrow, title, subtitle, back, actions }) {
   return (
     <div className="page-header">
       <div>
         {back && (
           <Link to={back.to} className="back-link"><i aria-hidden="true" className="bi bi-arrow-left" />{back.label}</Link>
         )}
+        {eyebrow && <span className="eyebrow mb-2">{eyebrow}</span>}
         <h1>{title}</h1>
         {subtitle && <p className="subtitle">{subtitle}</p>}
       </div>

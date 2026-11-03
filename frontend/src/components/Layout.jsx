@@ -7,9 +7,9 @@ import { Avatar } from './ui';
 
 function Brand() {
   return (
-    <Link to="/" className="sidebar-brand">
-      <span className="brand-mark"><i aria-hidden="true" className="bi bi-wallet2" /></span>
-      TIS Expenses
+    <Link to="/" className="sidebar-brand" aria-label="TechIntello Expense Management, dashboard">
+      <span className="logo-card"><img src="/brand/techintello-logo.png" alt="TechIntello Solutions" /></span>
+      <span className="app-name">Expense Management</span>
     </Link>
   );
 }
