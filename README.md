@@ -96,28 +96,6 @@ DB_PASSWORD=choose-one EMS_INITIAL_ADMIN_PASSWORD=choose-another docker compose 
 Open http://localhost:3000 and log in as `superadmin`. nginx in the frontend container serves the UI and forwards
 `/api` to the backend.
 
-## Free demo deployment (Vercel + Render + Aiven)
-
-For letting someone try the app before the AWS deployment. All three have free plans that need no credit card.
-The free backend sleeps after 15 minutes without traffic; the first request after that takes about a minute.
-
-1. **Database (Aiven):** create a free MySQL service at https://aiven.io. From its overview page note the host, port,
-   user (`avnadmin`) and password.
-2. **Backend (Render):** at https://render.com choose **New → Blueprint**, connect this GitHub repo, and it picks up
-   `render.yaml`. Fill in:
-   - `DB_URL` = `jdbc:mysql://HOST:PORT/defaultdb?sslMode=REQUIRED`
-   - `DB_USERNAME` = `avnadmin`, `DB_PASSWORD` = the Aiven password
-   - `EMS_INITIAL_ADMIN_PASSWORD` = the password you will log in with as `superadmin`
-   - `EMS_ALLOWED_ORIGINS` = your Vercel address (step 3; you can fill it in afterwards)
-
-   Wait until `https://tis-ems-api.onrender.com/actuator/health` shows `{"status":"UP"}`. If Render gave the service
-   a different address, change the URL in `frontend/vercel.json` to match and push.
-3. **Frontend (Vercel):** at https://vercel.com choose **Add New → Project**, import this repo, set **Root Directory**
-   to `frontend`, and deploy. Vercel serves the app and forwards `/api` to Render (`frontend/vercel.json`).
-4. Put the Vercel address into Render's `EMS_ALLOWED_ORIGINS`, open the Vercel address and log in as `superadmin`.
-
-Receipts and sessions are stored in the database, so nothing is lost when Render restarts the free backend.
-
 ## API overview
 
 All endpoints are under `/api` and need a logged-in session (or an `Authorization: Basic` header).

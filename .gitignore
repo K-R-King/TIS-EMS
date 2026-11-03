@@ -5,7 +5,6 @@ build/
 .DS_Store
 *.docx
 .env
-.vercel
 # Database dumps contain user credentials
 *.sql
 !backend/src/main/resources/db/migration/*.sql

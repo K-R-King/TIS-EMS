@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // The API is served from the same address as the app: in development the React dev server
-// forwards /api to the backend ("proxy" in package.json); in Docker, nginx does; on Vercel, a rewrite does.
+// forwards /api to the backend ("proxy" in package.json); in Docker, nginx does.
 export const API_URL = process.env.REACT_APP_API_URL || '/api';
 
 // The backend keeps the login in a session cookie, so every request sends cookies
