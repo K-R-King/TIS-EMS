@@ -1,38 +1,35 @@
 package TIS.EMS.controller;
 
-import TIS.EMS.models.User;
-import TIS.EMS.repository.UserRepository;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import TIS.EMS.dto.UserResponse;
+import TIS.EMS.service.CurrentUser;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
+
 @RestController
-@RequestMapping("/api/auth") // ✅ import fixed
-@CrossOrigin(origins = "http://localhost:3000") // Allow frontend
+@RequestMapping("/api/auth")
 public class AuthController {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final CurrentUser currentUser;
 
-    public AuthController(UserRepository userRepository,
-                          PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
+    public AuthController(CurrentUser currentUser) {
+        this.currentUser = currentUser;
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody User user) {
-        if (userRepository.findByUsername(user.getUsername()) != null) {
-            return ResponseEntity.badRequest().body("Username already exists");
-        }
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        userRepository.save(user);
-        return ResponseEntity.ok("User registered successfully");
-    }
-
+    /**
+     * Called with an Authorization: Basic header. Spring Security checks the password and
+     * stores the login in the session; this returns who logged in so the UI can route by role.
+     * (POST /api/auth/logout is handled by Spring Security.)
+     */
     @PostMapping("/login")
-    public ResponseEntity<String> login() {
-        // Spring Security will handle the authentication
-        return ResponseEntity.ok("Login successful");
+    public UserResponse login(Principal principal, HttpServletRequest request) {
+        request.changeSessionId(); // guard against session fixation
+        return UserResponse.from(currentUser.get(principal));
+    }
+
+    @GetMapping("/me")
+    public UserResponse me(Principal principal) {
+        return UserResponse.from(currentUser.get(principal));
     }
 }

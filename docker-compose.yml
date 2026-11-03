@@ -1,0 +1,43 @@
+# Runs the whole stack locally: docker compose up --build
+# App: http://localhost:3000   API: http://localhost:8080
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: mydatabase
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-change-me}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_PASSWORD:-change-me}"]
+      interval: 5s
+      retries: 20
+
+  backend:
+    build: "./Backend/EMS-attempt - Copy"
+    environment:
+      DB_URL: jdbc:mysql://db:3306/mydatabase
+      DB_PASSWORD: ${DB_PASSWORD:-change-me}
+      EMS_ALLOWED_ORIGINS: http://localhost:3000
+      EMS_INITIAL_ADMIN_PASSWORD: ${EMS_INITIAL_ADMIN_PASSWORD:-}
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: "./Frontend/my-app - Copy"
+      args:
+        REACT_APP_API_URL: http://localhost:8080/api
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  db-data:
+  uploads:

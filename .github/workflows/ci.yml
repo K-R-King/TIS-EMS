@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (Spring Boot)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "Backend/EMS-attempt - Copy"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: Build and test
+        run: ./mvnw -B verify
+
+  frontend:
+    name: Frontend (React)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "Frontend/my-app - Copy"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: "Frontend/my-app - Copy/package-lock.json"
+      - run: npm ci
+      - name: Test
+        run: npm test -- --watchAll=false
+        env:
+          CI: true
+      - name: Build
+        run: npm run build
+        env:
+          CI: true
+
+  docker:
+    name: Docker images
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend image
+        run: docker build -t ems-backend "Backend/EMS-attempt - Copy"
+      - name: Build frontend image
+        run: docker build -t ems-frontend "Frontend/my-app - Copy"
+      # Pushing to Amazon ECR and deploying to EKS is handled by the DevOps team.

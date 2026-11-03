@@ -18,18 +18,13 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // Fetch user entity from database
-        User entityUser = userRepository.findByUsername(username);
+        User entityUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
-        if (entityUser == null) {
-            throw new UsernameNotFoundException("User not found: " + username);
-        }
-
-        // Build and return Spring Security UserDetails object
         return org.springframework.security.core.userdetails.User.builder()
                 .username(entityUser.getUsername())
-                .password(entityUser.getPassword()) // password should already be BCrypt hashed
-                .roles(entityUser.getRole())        // roles like SUPERADMIN, ADMIN, MANAGER
+                .password(entityUser.getPassword())
+                .roles(entityUser.getRole())
                 .build();
     }
 }

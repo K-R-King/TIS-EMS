@@ -1,56 +1,64 @@
 package TIS.EMS.config;
 
+import TIS.EMS.models.Role;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 
+/**
+ * Basic authentication (username/password) as the requirements specify. A successful
+ * login is kept in a server-side session, so the browser only sends the password once.
+ */
 @Configuration
 public class SecurityConfig {
 
-    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
-    private final CustomUserDetailsService customUserDetailsService;
+    private static final String[] ADMINS = {Role.SUPERADMIN, Role.ADMIN};
 
-    public SecurityConfig(CustomAuthenticationEntryPoint customAuthenticationEntryPoint,
-                          CustomUserDetailsService customUserDetailsService) {
-        this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
-        this.customUserDetailsService = customUserDetailsService;
+    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+
+    public SecurityConfig(CustomAuthenticationEntryPoint authenticationEntryPoint) {
+        this.authenticationEntryPoint = authenticationEntryPoint;
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                // The session cookie is SameSite=Lax and CORS only admits the frontend origin,
+                // so cross-site form posts cannot ride on a logged-in session.
                 .csrf(csrf -> csrf.disable())
+                .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                        // Allow authentication and dropdowns without login
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/dropdowns/**").permitAll()
-                        // Everything else under /api requires authentication
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/error", "/api/auth/logout").permitAll()
+                        .requestMatchers("/api/users/**", "/api/settings/**").hasRole(Role.SUPERADMIN)
+                        // Managers may comment on expenses but not change them
+                        .requestMatchers(HttpMethod.POST, "/api/expenses/*/comments").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/expenses/**").hasAnyRole(ADMINS)
+                        .requestMatchers(HttpMethod.PUT, "/api/expenses/**").hasAnyRole(ADMINS)
+                        .requestMatchers(HttpMethod.DELETE, "/api/expenses/**").hasAnyRole(ADMINS)
                         .requestMatchers("/api/**").authenticated()
-                        .anyRequest().permitAll()
+                        .anyRequest().denyAll()
                 )
-                .httpBasic(httpBasic ->
-                        httpBasic.authenticationEntryPoint(customAuthenticationEntryPoint)
-                )
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-                );
+                .httpBasic(basic -> basic
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .securityContextRepository(new HttpSessionSecurityContextRepository()))
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint))
+                .logout(logout -> logout
+                        .logoutUrl("/api/auth/logout")
+                        .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler()));
 
         return http.build();
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return NoOpPasswordEncoder.getInstance();
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
+        return new BCryptPasswordEncoder();
     }
 }
