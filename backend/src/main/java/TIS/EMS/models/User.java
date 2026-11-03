@@ -27,6 +27,9 @@ public class User {
 
     private Instant lockedUntil; // set after too many failed logins
 
+    @Column(nullable = false)
+    private boolean active = true; // deactivated accounts cannot log in
+
     public User() {}
 
     public User(String name, String username, String password, String role) {
@@ -46,6 +49,9 @@ public class User {
     public Instant getLockedUntil() { return lockedUntil; }
     public void setFailedLogins(int failedLogins) { this.failedLogins = failedLogins; }
     public void setLockedUntil(Instant lockedUntil) { this.lockedUntil = lockedUntil; }
+
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
 
     public boolean isLocked() { return lockedUntil != null && lockedUntil.isAfter(Instant.now()); }
 

@@ -40,6 +40,14 @@ function validate(form, file) {
   return errors;
 }
 
+/** Existing expenses with the same date|amount|category key, other than the one being edited. */
+function findDuplicates(key, excludeId) {
+  const [date, amount, categoryId] = key.split('|');
+  return api.get('/expenses/duplicates', { params: { date, amount, categoryId, excludeId } })
+    .then((res) => res.data)
+    .catch(() => []); // the warning is a convenience; never block saving on it
+}
+
 /** Add Expense screen, also used to edit an existing expense at /expenses/:id/edit. */
 export default function ExpenseForm() {
   const { id } = useParams();
@@ -67,11 +75,8 @@ export default function ExpenseForm() {
 
   useEffect(() => {
     if (!duplicateKey) return undefined;
-    const [date, amount, categoryId] = duplicateKey.split('|');
     const handle = setTimeout(() => {
-      api.get('/expenses/duplicates', { params: { date, amount, categoryId, excludeId: id } })
-        .then((res) => setDuplicates({ key: duplicateKey, items: res.data }))
-        .catch(() => setDuplicates({ key: duplicateKey, items: [] }));
+      findDuplicates(duplicateKey, id).then((items) => setDuplicates({ key: duplicateKey, items }));
     }, 400);
     return () => clearTimeout(handle);
   }, [duplicateKey, id]);
@@ -111,13 +116,20 @@ export default function ExpenseForm() {
     setErrors((errs) => ({ ...errs, attachment: validate(form, chosen).attachment }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setServerError('');
     const found = validate(form, file);
     setErrors(found);
     if (Object.keys(found).length > 0) return;
-    if (possibleDuplicates.length > 0) {
+
+    // The check normally runs while typing; if Submit came first, run it now
+    let matches = possibleDuplicates;
+    if (duplicates.key !== duplicateKey) {
+      matches = await findDuplicates(duplicateKey, id);
+      setDuplicates({ key: duplicateKey, items: matches });
+    }
+    if (matches.length > 0) {
       setConfirmingDuplicate(true);
       return;
     }

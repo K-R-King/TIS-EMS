@@ -46,7 +46,7 @@ Neither image contains secrets or environment-specific settings; everything belo
 | `DB_USERNAME` | `ems_app` | Needs DDL rights on its schema (migrations run at startup) |
 | `DB_PASSWORD` | — | **Secret** |
 | `EMS_ALLOWED_ORIGINS` | `https://ems.techintello.com` | The public address of the UI |
-| `EMS_INITIAL_ADMIN_PASSWORD` | — | **Secret.** Only used on the very first start, when the users table is empty, to create `superadmin`. Can be removed afterwards. |
+| `EMS_INITIAL_ADMIN_PASSWORD` | — | **Secret.** Only used on the very first start, when the users table is empty, to create `superadmin`; the backend refuses to start on an empty database without it. Can be removed afterwards. |
 | `SPRING_PROFILES_ACTIVE` | `prod` | Already the default in the image: JSON logs, `Secure` session cookie, honours `X-Forwarded-*` |
 | `EMS_TIME_ZONE` | `Asia/Kolkata` | Default shown; business dates follow this zone, not the server's |
 
@@ -74,7 +74,8 @@ API documentation (Swagger UI, `/v3/api-docs`) is disabled in the `prod` profile
 ## State and scaling
 
 - **Stateless pods.** Login sessions (Spring Session JDBC) and receipt files are stored in MySQL, so any replica can
-  serve any request: no sticky sessions, no shared volumes. Scale the backend horizontally as needed.
+  serve any request: no sticky sessions, no shared volumes. Scale the backend horizontally as needed. Because sessions
+  are shared, deactivating a user or changing their role ends their sessions on every replica immediately.
 - **Database migrations** (Flyway) run automatically when the backend starts. Flyway takes a database lock, so several
   replicas starting at once is safe. Schema history is in the `flyway_schema_history` table.
 - **Backups:** the database is the only state. Receipts are inside it (`expense_attachments`), so it will grow with use;

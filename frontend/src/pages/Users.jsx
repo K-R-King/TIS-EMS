@@ -79,7 +79,7 @@ export default function Users() {
   const { user: me } = useAuth();
   const [users, setUsers] = useState(null);
   const [editing, setEditing] = useState(null); // null, {} for new, or a user
-  const [deleting, setDeleting] = useState(null);
+  const [confirming, setConfirming] = useState(null); // { action: 'delete' | 'deactivate', user }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -103,6 +103,18 @@ export default function Users() {
     }
   };
 
+  const replace = (saved) => setUsers((list) => list.map((x) => (x.id === saved.id ? saved : x)));
+
+  const handleActivate = async (u) => {
+    setError('');
+    try {
+      replace((await api.post(`/users/${u.id}/activate`)).data);
+      setNotice(`${u.username} is active again and can log in.`);
+    } catch (err) {
+      setError(errorMessage(err, 'Could not reactivate user.'));
+    }
+  };
+
   const handleSaved = (saved, wasEdit) => {
     setUsers((list) => (wasEdit ? list.map((u) => (u.id === saved.id ? saved : u)) : [...list, saved])
       .sort((a, b) => a.username.localeCompare(b.username)));
@@ -110,19 +122,25 @@ export default function Users() {
     setNotice(`${saved.username} ${wasEdit ? 'updated' : 'added'}.`);
   };
 
-  const handleDelete = async () => {
+  const handleConfirmed = async () => {
+    const { action, user: u } = confirming;
     setBusy(true);
     setError('');
     setNotice('');
     try {
-      await api.delete(`/users/${deleting.id}`);
-      setUsers((list) => list.filter((x) => x.id !== deleting.id));
-      setNotice(`${deleting.username} deleted.`);
+      if (action === 'delete') {
+        await api.delete(`/users/${u.id}`);
+        setUsers((list) => list.filter((x) => x.id !== u.id));
+        setNotice(`${u.username} deleted.`);
+      } else {
+        replace((await api.post(`/users/${u.id}/deactivate`)).data);
+        setNotice(`${u.username} is deactivated and has been logged out.`);
+      }
     } catch (err) {
-      setError(errorMessage(err, 'Could not delete user.'));
+      setError(errorMessage(err, `Could not ${action} user.`));
     } finally {
       setBusy(false);
-      setDeleting(null);
+      setConfirming(null);
     }
   };
 
@@ -151,12 +169,18 @@ export default function Users() {
                 {users.map((u) => {
                   const tone = ROLE_TONES[u.role] || 'secondary';
                   return (
-                    <tr key={u.id}>
+                    <tr key={u.id} className={u.active ? undefined : 'opacity-75'}>
                       <td>
-                        <span className="d-inline-flex align-items-center gap-2 fw-medium">
+                        <span className="d-inline-flex align-items-center gap-2 fw-medium flex-wrap">
                           <Avatar name={u.name} size={32} />{u.name}
                           {u.id === me.id && <span className="badge rounded-pill bg-body-tertiary text-secondary border">You</span>}
-                          {u.locked && (
+                          {!u.active && (
+                            <span className="badge rounded-pill bg-secondary-subtle text-secondary-emphasis border"
+                                  title="Cannot log in; kept for the audit trail">
+                              <i aria-hidden="true" className="bi bi-slash-circle me-1" />Deactivated
+                            </span>
+                          )}
+                          {u.active && u.locked && (
                             <span className="badge rounded-pill bg-danger-subtle text-danger-emphasis border border-danger-subtle"
                                   title="Locked after too many failed logins">
                               <i aria-hidden="true" className="bi bi-lock-fill me-1" />Locked
@@ -171,14 +195,27 @@ export default function Users() {
                         </span>
                       </td>
                       <td className="text-end text-nowrap">
-                        {u.locked && (
+                        {u.active && u.locked && (
                           <button className="btn btn-sm btn-outline-success me-2" onClick={() => handleUnlock(u)}>
                             <i aria-hidden="true" className="bi bi-unlock" />Unlock
                           </button>
                         )}
                         <button className="btn btn-sm btn-outline-secondary btn-icon me-2" onClick={() => startEdit(u)}
                                 aria-label={`Edit ${u.username}`} title="Edit"><i aria-hidden="true" className="bi bi-pencil" /></button>
-                        <button className="btn btn-sm btn-outline-danger btn-icon" onClick={() => setDeleting(u)}
+                        {u.active ? (
+                          <button className="btn btn-sm btn-outline-secondary btn-icon me-2"
+                                  onClick={() => setConfirming({ action: 'deactivate', user: u })}
+                                  disabled={u.id === me.id} aria-label={`Deactivate ${u.username}`}
+                                  title={u.id === me.id ? 'You cannot deactivate your own account' : 'Deactivate (remove access, keep records)'}>
+                            <i aria-hidden="true" className="bi bi-person-slash" />
+                          </button>
+                        ) : (
+                          <button className="btn btn-sm btn-outline-success me-2" onClick={() => handleActivate(u)}
+                                  aria-label={`Reactivate ${u.username}`}>
+                            <i aria-hidden="true" className="bi bi-person-check" />Reactivate
+                          </button>
+                        )}
+                        <button className="btn btn-sm btn-outline-danger btn-icon" onClick={() => setConfirming({ action: 'delete', user: u })}
                                 disabled={u.id === me.id} aria-label={`Delete ${u.username}`}
                                 title={u.id === me.id ? 'You cannot delete your own account' : 'Delete'}>
                           <i aria-hidden="true" className="bi bi-trash" />
@@ -193,9 +230,18 @@ export default function Users() {
         )}
       </div>
 
-      {deleting && (
-        <ConfirmDialog title={`Delete ${deleting.username}?`} busy={busy} onConfirm={handleDelete} onCancel={() => setDeleting(null)}>
-          They will no longer be able to log in. Users who have entered expenses or comments are kept for the audit trail.
+      {confirming?.action === 'delete' && (
+        <ConfirmDialog title={`Delete ${confirming.user.username}?`} busy={busy} onConfirm={handleConfirmed}
+                       onCancel={() => setConfirming(null)}>
+          This removes the account completely. Accounts that appear on expenses, comments or their history cannot be
+          deleted; deactivate them instead.
+        </ConfirmDialog>
+      )}
+      {confirming?.action === 'deactivate' && (
+        <ConfirmDialog title={`Deactivate ${confirming.user.username}?`} confirmLabel="Deactivate" tone="warning" busy={busy}
+                       onConfirm={handleConfirmed} onCancel={() => setConfirming(null)}>
+          They are logged out now and cannot log in again until reactivated. Their name stays on everything they entered or
+          reviewed.
         </ConfirmDialog>
       )}
     </>

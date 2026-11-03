@@ -24,7 +24,10 @@ The backend enforces these rules on every API call; the UI only hides what a rol
 ## Features
 
 - Login (username/password, BCrypt-hashed, server-side session). 5 wrong passwords lock an account for 15 minutes;
-  a Super Admin can unlock it. Everyone can change their own password under **Account**.
+  a Super Admin can unlock it. Everyone can change their own password under **Account** (which logs out their other
+  sessions).
+- Accounts that appear on expenses, comments or history can't be deleted (audit trail); a Super Admin **deactivates**
+  them instead. Deactivating, deleting, or changing someone's role or password ends their open sessions at once.
 - Dashboard: totals, this month vs last month, 6-month trend, spend by category and status, recent expenses.
 - Expenses: add/edit with receipt upload (PDF/JPG/PNG, 10 MB), list with filters (date range, category, payment mode,
   reimbursement type, status), search and paging, details with receipt preview, manager review comments, and an
@@ -61,7 +64,8 @@ API documentation (Swagger UI) is at http://localhost:8080/swagger-ui.html while
 **Authorize** with a username and password to try requests. It is switched off in the `prod` profile.
 
 On first start with an empty `users` table the backend creates a `superadmin` account and prints its generated
-password in the log once. Set `EMS_INITIAL_ADMIN_PASSWORD` beforehand to choose it. Create everyone else under
+password in the log once. Set `EMS_INITIAL_ADMIN_PASSWORD` beforehand to choose it (required with the `prod` profile,
+which is what Docker uses, so a password never ends up in production logs). Create everyone else under
 **Users**. Default dropdown values (Travel, Hotel, … / Cash, UPI, … / Personal Reimbursement, …) are added automatically.
 
 ### Database changes
@@ -127,5 +131,5 @@ All endpoints are under `/api` and need a logged-in session (or an `Authorizatio
 | `GET`/`POST /expenses/{id}/comments` | all roles |
 | `POST /expenses`, `PUT /expenses/{id}` (multipart), `DELETE /expenses/{id}`, `POST /expenses/import` (`allowDuplicates`), `GET /expenses/import/template` | Super Admin, Expense Admin |
 | `GET /dropdowns/{categories,payment-modes,reimbursement-types,statuses}` | all roles |
-| `/users` (CRUD, `POST /users/{id}/unlock`), `/settings/{categories,payment-modes,reimbursement-types}` | Super Admin |
+| `/users` (CRUD, `POST /users/{id}/unlock`, `/deactivate`, `/activate`), `/settings/{categories,payment-modes,reimbursement-types}` | Super Admin |
 | `GET /actuator/health/liveness`, `/actuator/health/readiness` (not under `/api`) | public |

@@ -20,7 +20,7 @@ services:
       DB_URL: jdbc:mysql://db:3306/mydatabase
       DB_PASSWORD: ${DB_PASSWORD:-change-me}
       EMS_ALLOWED_ORIGINS: http://localhost:3000
-      EMS_INITIAL_ADMIN_PASSWORD: ${EMS_INITIAL_ADMIN_PASSWORD:-}
+      EMS_INITIAL_ADMIN_PASSWORD: ${EMS_INITIAL_ADMIN_PASSWORD:?Set EMS_INITIAL_ADMIN_PASSWORD (password for the first superadmin login)}
     ports:
       - "8080:8080" # only needed for health checks/debugging; the UI goes through nginx
     depends_on:

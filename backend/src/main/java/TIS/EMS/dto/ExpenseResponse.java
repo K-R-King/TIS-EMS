@@ -15,7 +15,7 @@ public record ExpenseResponse(
         boolean taxApplicable,
         Ref paymentMode,
         String description,
-        UserResponse enteredBy,
+        PersonResponse enteredBy,
         String status,
         String attachmentName,
         String attachmentContentType,
@@ -27,7 +27,7 @@ public record ExpenseResponse(
                 e.getId(), e.getDate(), e.getAmount(),
                 Ref.from(e.getCategory()), Ref.from(e.getReimbursementType()),
                 e.isTaxApplicable(), Ref.from(e.getPaymentMode()),
-                e.getDescription(), UserResponse.from(e.getEnteredBy()), e.getStatus(),
+                e.getDescription(), PersonResponse.from(e.getEnteredBy()), e.getStatus(),
                 e.getAttachmentName(), e.getAttachmentContentType(),
                 e.getCreatedAt(), e.getUpdatedAt());
     }

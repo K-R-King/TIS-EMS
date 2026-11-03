@@ -149,3 +149,28 @@ test('five wrong passwords lock an account until a super admin unlocks it', asyn
   await logIn(page, people.manager.username, people.manager.password);
   await expect(page).toHaveURL(/\/expenses$/);
 });
+
+test('a deactivated account is logged out and cannot log back in', async ({ browser, page }) => {
+  // The manager is logged in somewhere else...
+  const managerContext = await browser.newContext();
+  const managerPage = await managerContext.newPage();
+  await logIn(managerPage, people.manager.username, people.manager.password);
+
+  // ...when the super admin deactivates the account
+  await logIn(page, 'superadmin', ADMIN_PASSWORD);
+  await sidebar(page, 'Users').click();
+  await page.getByRole('button', { name: `Deactivate ${people.manager.username}` }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Deactivate' }).click();
+  await expect(page.getByText(`${people.manager.username} is deactivated and has been logged out.`)).toBeVisible();
+
+  // The manager's next action sends them to the login page, and logging in is refused
+  await managerPage.getByLabel('Main navigation').getByRole('link', { name: 'Dashboard', exact: true }).click();
+  await expect(managerPage).toHaveURL(/\/login$/);
+  await attemptLogIn(managerPage, people.manager.username, people.manager.password);
+  await expect(managerPage.getByRole('alert')).toContainText('deactivated');
+  await managerContext.close();
+
+  // Their review comment is still on the expense
+  await page.goto(expenseUrl);
+  await expect(page.getByText('Please attach the GST invoice.')).toBeVisible();
+});

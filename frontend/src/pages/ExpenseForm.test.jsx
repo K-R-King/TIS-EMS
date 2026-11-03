@@ -118,6 +118,18 @@ describe('Duplicate warning', () => {
     await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
   });
 
+  test('submitting straight after typing still checks for duplicates', async () => {
+    const user = userEvent.setup();
+    mockGet(api, { '/expenses/duplicates': [expense({ id: 12, amount: 450.75 })] });
+    renderPage(<ExpenseForm />, NEW);
+    await screen.findByRole('option', { name: 'Travel' });
+    await fillValid(user);
+    await user.click(screen.getByRole('button', { name: /submit expense/i })); // well within the 400 ms delay
+
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Save a possible duplicate?');
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
   test('editing ignores the expense being edited', async () => {
     mockGet(api, {
       '/expenses/9': expense({ id: 9, amount: 300, category: { id: 1, name: 'Food' } }),

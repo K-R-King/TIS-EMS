@@ -9,6 +9,7 @@ import TIS.EMS.repository.ExpenseHistoryRepository;
 import TIS.EMS.repository.ExpenseRepository;
 import TIS.EMS.repository.UserRepository;
 import TIS.EMS.service.CurrentUser;
+import TIS.EMS.service.SessionRevoker;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,19 +34,22 @@ public class UserController {
     private final ExpenseHistoryRepository historyRepository;
     private final PasswordEncoder passwordEncoder;
     private final CurrentUser currentUser;
+    private final SessionRevoker sessionRevoker;
 
     public UserController(UserRepository userRepository,
                           ExpenseRepository expenseRepository,
                           ExpenseCommentRepository commentRepository,
                           ExpenseHistoryRepository historyRepository,
                           PasswordEncoder passwordEncoder,
-                          CurrentUser currentUser) {
+                          CurrentUser currentUser,
+                          SessionRevoker sessionRevoker) {
         this.userRepository = userRepository;
         this.expenseRepository = expenseRepository;
         this.commentRepository = commentRepository;
         this.historyRepository = historyRepository;
         this.passwordEncoder = passwordEncoder;
         this.currentUser = currentUser;
+        this.sessionRevoker = sessionRevoker;
     }
 
     @GetMapping
@@ -75,17 +79,26 @@ public class UserController {
             if (user.getId().equals(currentUser.get(principal).getId())) {
                 throw conflict("You cannot remove your own Super Admin role");
             }
-            if (userRepository.countByRole(Role.SUPERADMIN) <= 1) throw conflict("There must be at least one Super Admin");
+            requireAnotherActiveSuperAdmin(user);
         }
+
+        String oldUsername = user.getUsername();
+        boolean newPassword = request.password() != null && !request.password().isEmpty();
+        boolean accessChanged = newPassword || !role.equals(user.getRole()) || !username.equals(oldUsername);
 
         user.setName(trimToNull(request.name()));
         user.setUsername(username);
         user.setRole(role);
-        if (request.password() != null && !request.password().isEmpty()) {
+        if (newPassword) {
             user.setPassword(passwordEncoder.encode(requirePassword(request.password())));
             unlock(user); // a password reset also clears a lockout
         }
-        return UserResponse.from(userRepository.save(user));
+        UserResponse saved = UserResponse.from(userRepository.save(user));
+        // Existing sessions still carry the old role; make the person log in again
+        if (accessChanged && !user.getId().equals(currentUser.get(principal).getId())) {
+            sessionRevoker.revokeAll(oldUsername);
+        }
+        return saved;
     }
 
     @DeleteMapping("/{id}")
@@ -93,14 +106,34 @@ public class UserController {
     public void delete(@PathVariable Long id, Principal principal) {
         User user = find(id);
         if (user.getId().equals(currentUser.get(principal).getId())) throw conflict("You cannot delete your own account");
-        if (Role.SUPERADMIN.equals(user.getRole()) && userRepository.countByRole(Role.SUPERADMIN) <= 1) {
-            throw conflict("There must be at least one Super Admin");
-        }
+        if (Role.SUPERADMIN.equals(user.getRole())) requireAnotherActiveSuperAdmin(user);
         if (expenseRepository.existsByEnteredById(id) || commentRepository.existsByAuthorId(id)
                 || historyRepository.existsByUserId(id)) {
-            throw conflict("This user has entered expenses or comments, so the account is kept for the audit trail");
+            throw conflict("This user appears on expenses, comments or their history, so the account is kept for the "
+                    + "audit trail. Deactivate it instead to remove access.");
         }
         userRepository.delete(user);
+        sessionRevoker.revokeAll(user.getUsername());
+    }
+
+    /** Removes access while keeping the account (and its name on past records). */
+    @PostMapping("/{id}/deactivate")
+    public UserResponse deactivate(@PathVariable Long id, Principal principal) {
+        User user = find(id);
+        if (user.getId().equals(currentUser.get(principal).getId())) throw conflict("You cannot deactivate your own account");
+        if (Role.SUPERADMIN.equals(user.getRole())) requireAnotherActiveSuperAdmin(user);
+        user.setActive(false);
+        UserResponse saved = UserResponse.from(userRepository.save(user));
+        sessionRevoker.revokeAll(user.getUsername());
+        return saved;
+    }
+
+    @PostMapping("/{id}/activate")
+    public UserResponse activate(@PathVariable Long id) {
+        User user = find(id);
+        user.setActive(true);
+        unlock(user);
+        return UserResponse.from(userRepository.save(user));
     }
 
     /** Clears a lockout caused by too many failed logins. */
@@ -109,6 +142,12 @@ public class UserController {
         User user = find(id);
         unlock(user);
         return UserResponse.from(userRepository.save(user));
+    }
+
+    /** Keeps at least one Super Admin who can still log in. */
+    private void requireAnotherActiveSuperAdmin(User user) {
+        long active = userRepository.countByRoleAndActiveTrue(Role.SUPERADMIN);
+        if (active - (user.isActive() ? 1 : 0) < 1) throw conflict("There must be at least one active Super Admin");
     }
 
     private static void unlock(User user) {

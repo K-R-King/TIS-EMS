@@ -110,6 +110,8 @@ class ApiSecurityTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.amount").value(125.50))
                 .andExpect(jsonPath("$.enteredBy.username").value("t-admin"))
+                .andExpect(jsonPath("$.enteredBy.role").doesNotExist())
+                .andExpect(jsonPath("$.enteredBy.locked").doesNotExist())
                 .andExpect(jsonPath("$.status").value("Pending Review"));
     }
 

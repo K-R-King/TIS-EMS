@@ -26,6 +26,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .password(entityUser.getPassword())
                 .roles(entityUser.getRole())
                 .accountLocked(entityUser.isLocked())
+                .disabled(!entityUser.isActive())
                 .build();
     }
 }

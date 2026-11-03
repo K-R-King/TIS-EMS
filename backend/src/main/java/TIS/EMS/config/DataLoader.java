@@ -33,19 +33,22 @@ public class DataLoader implements CommandLineRunner {
     private final UserRepository userRepo;
     private final PasswordEncoder passwordEncoder;
     private final String initialAdminPassword;
+    private final boolean requireInitialAdminPassword;
 
     public DataLoader(CategoryRepository categoryRepo,
                       ReimbursementTypeRepository reimbursementRepo,
                       PaymentModeRepository paymentModeRepo,
                       UserRepository userRepo,
                       PasswordEncoder passwordEncoder,
-                      @Value("${ems.initial-admin-password:}") String initialAdminPassword) {
+                      @Value("${ems.initial-admin-password:}") String initialAdminPassword,
+                      @Value("${ems.require-initial-admin-password:false}") boolean requireInitialAdminPassword) {
         this.categoryRepo = categoryRepo;
         this.reimbursementRepo = reimbursementRepo;
         this.paymentModeRepo = paymentModeRepo;
         this.userRepo = userRepo;
         this.passwordEncoder = passwordEncoder;
         this.initialAdminPassword = initialAdminPassword;
+        this.requireInitialAdminPassword = requireInitialAdminPassword;
     }
 
     @Override
@@ -78,6 +81,11 @@ public class DataLoader implements CommandLineRunner {
         if (userRepo.count() > 0) return;
 
         String password = initialAdminPassword;
+        if (password.isBlank() && requireInitialAdminPassword) {
+            // Never put a generated password into production logs
+            throw new IllegalStateException("The users table is empty. Set EMS_INITIAL_ADMIN_PASSWORD so the first "
+                    + "'superadmin' account can be created, then restart.");
+        }
         if (password.isBlank()) {
             byte[] bytes = new byte[12];
             new SecureRandom().nextBytes(bytes);
