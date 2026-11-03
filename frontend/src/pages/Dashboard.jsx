@@ -139,7 +139,7 @@ export default function Dashboard() {
             {canEditExpenses(user) ? <Link to="/expenses/new">Add the first one</Link> : 'Expenses will appear here once added.'}
           </EmptyState>
         ) : (
-          <div className="table-responsive">
+          <div className="table-responsive" tabIndex={0} role="region" aria-label="Recent expenses table">
             <table className="table table-clickable align-middle">
               <thead>
                 <tr><th>Date</th><th>Category</th><th>Entered by</th><th>Status</th><th className="text-end">Amount</th></tr>

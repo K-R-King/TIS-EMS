@@ -133,6 +133,44 @@ class ExpenseImportTests {
     }
 
     @Test
+    void formulaCellsUseTheirCalculatedValues() throws Exception {
+        // Saved the way Excel saves it: formulas plus their calculated results
+        try (Workbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = wb.createSheet();
+            Row head = sheet.createRow(0);
+            String[] headings = {"Date", "Amount", "Category", "Tax Applicable", "Description"};
+            for (int i = 0; i < headings.length; i++) head.createCell(i).setCellValue(headings[i]);
+            Row row = sheet.createRow(1);
+            row.createCell(0).setCellFormula("DATE(2026,2,14)");
+            row.createCell(1).setCellFormula("1000*1.18");
+            row.createCell(2).setCellFormula("\"Ho\"&\"tel\"");
+            row.createCell(3).setCellFormula("IF(B2>500,\"Yes\",\"No\")");
+            row.createCell(4).setCellValue("Formula row");
+            Row gst = sheet.createRow(2); // floating-point result: 1233.5366 -> 1233.54
+            gst.createCell(0).setCellValue("2026-02-15");
+            gst.createCell(1).setCellFormula("1045.37*1.18");
+            gst.createCell(2).setCellValue("Hotel");
+            gst.createCell(4).setCellValue("Formula row GST");
+            wb.getCreationHelper().createFormulaEvaluator().evaluateAll();
+            wb.write(out);
+
+            mvc.perform(multipart("/api/expenses/import")
+                            .file(new MockMultipartFile("file", "formulas.xlsx", "application/octet-stream", out.toByteArray()))
+                            .with(httpBasic("i-admin", PASSWORD)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.imported").value(2));
+        }
+        mvc.perform(get("/api/expenses").param("q", "Formula row GST").with(httpBasic("i-admin", PASSWORD)))
+                .andExpect(jsonPath("$.items[0].amount").value(1233.54));
+        mvc.perform(get("/api/expenses").param("from", "2026-02-14").param("to", "2026-02-14").param("q", "Formula row")
+                        .with(httpBasic("i-admin", PASSWORD)))
+                .andExpect(jsonPath("$.items[0].amount").value(1180.0))
+                .andExpect(jsonPath("$.items[0].date").value("2026-02-14"))
+                .andExpect(jsonPath("$.items[0].category.name").value("Hotel"))
+                .andExpect(jsonPath("$.items[0].taxApplicable").value(true));
+    }
+
+    @Test
     void managersCannotImport() throws Exception {
         mvc.perform(multipart("/api/expenses/import").file(workbook(new Object[]{"Date"}))
                         .with(httpBasic("i-manager", PASSWORD)))

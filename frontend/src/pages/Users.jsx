@@ -162,14 +162,14 @@ export default function Users() {
       <div className="card">
         {users === null && !error && <Loading />}
         {users && (
-          <div className="table-responsive">
+          <div className="table-responsive" tabIndex={0} role="region" aria-label="Users table">
             <table className="table align-middle">
               <thead><tr><th>Name</th><th>Username</th><th>Role</th><th /></tr></thead>
               <tbody>
                 {users.map((u) => {
                   const tone = ROLE_TONES[u.role] || 'secondary';
                   return (
-                    <tr key={u.id} className={u.active ? undefined : 'opacity-75'}>
+                    <tr key={u.id}>
                       <td>
                         <span className="d-inline-flex align-items-center gap-2 fw-medium flex-wrap">
                           <Avatar name={u.name} size={32} />{u.name}

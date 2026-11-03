@@ -137,7 +137,7 @@ export default function ImportExpenses() {
 
       <div className="card mt-3">
         <div className="card-header">Columns</div>
-        <div className="table-responsive">
+        <div className="table-responsive" tabIndex={0} role="region" aria-label="Import columns table">
           <table className="table align-middle">
             <thead><tr><th>Heading</th><th /><th>What to enter</th></tr></thead>
             <tbody>

@@ -22,12 +22,13 @@ public record ExpenseFilter(LocalDate from, LocalDate to, Long categoryId, Long 
             if (reimbursementTypeId != null) p.add(cb.equal(root.get("reimbursementType").get("id"), reimbursementTypeId));
             if (status != null && !status.isBlank()) p.add(cb.equal(root.get("status"), status));
             if (q != null && !q.isBlank()) {
-                String like = "%" + q.trim().toLowerCase() + "%";
+                // Search for the text as typed: %, _ and \ are literal characters, not LIKE wildcards
+                String like = "%" + q.trim().toLowerCase().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
                 var user = root.join("enteredBy");
                 p.add(cb.or(
-                        cb.like(cb.lower(root.get("description")), like),
-                        cb.like(cb.lower(user.get("name")), like),
-                        cb.like(cb.lower(user.get("username")), like)));
+                        cb.like(cb.lower(root.get("description")), like, '\\'),
+                        cb.like(cb.lower(user.get("name")), like, '\\'),
+                        cb.like(cb.lower(user.get("username")), like, '\\')));
             }
             return cb.and(p.toArray(Predicate[]::new));
         };

@@ -1,14 +1,11 @@
 # Rendered by the nginx image at startup; ${BACKEND_URL} comes from the environment.
 server {
-    listen 80;
+    listen 8080;
     root /usr/share/nginx/html;
+    server_tokens off;
 
     # Receipts can be up to 10 MB
     client_max_body_size 12m;
-
-    add_header X-Content-Type-Options nosniff always;
-    add_header Referrer-Policy strict-origin-when-cross-origin always;
-    add_header X-Frame-Options SAMEORIGIN always;
 
     # The API is served from the same address as the app, so the login cookie stays first-party
     location /api/ {
@@ -18,16 +15,19 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
         proxy_read_timeout 120s;
+        # API responses keep the backend's own security headers (Spring Security)
     }
 
+    # Built files have content hashes in their names, so they can be cached for a long time
     location /assets/ {
         expires 1y;
-        add_header Cache-Control "public, immutable";
+        include /etc/nginx/snippets/security-headers.conf;
     }
 
-    # Single-page app: unknown paths load index.html and React Router takes over
+    # Single-page app: unknown paths load index.html (never cached, so new releases show up at once)
     location / {
-        add_header Cache-Control "no-cache";
+        expires -1;
         try_files $uri /index.html;
+        include /etc/nginx/snippets/security-headers.conf;
     }
 }

@@ -16,6 +16,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -80,6 +81,8 @@ public class ExpenseImportService {
         try (InputStream in = file.getInputStream(); Workbook workbook = WorkbookFactory.create(in)) {
             Sheet sheet = workbook.getSheetAt(0);
             DataFormatter formatter = new DataFormatter(Locale.ENGLISH);
+            // Formula cells (e.g. =B2*1.18) are read as the result Excel calculated and saved, not the formula text
+            formatter.setUseCachedValuesForFormulaCells(true);
             Map<String, Integer> columns = headerColumns(sheet.getRow(sheet.getFirstRowNum()), formatter);
 
             List<String> missing = REQUIRED.stream().filter(c -> !columns.containsKey(c)).sorted().toList();
@@ -248,9 +251,14 @@ public class ExpenseImportService {
         return columns.keySet().stream().allMatch(c -> text(row, columns, c, formatter).isEmpty());
     }
 
+    /** The cell's type, or for a formula the type of its calculated result. */
+    private static CellType valueType(Cell cell) {
+        return cell.getCellType() == CellType.FORMULA ? cell.getCachedFormulaResultType() : cell.getCellType();
+    }
+
     private static LocalDate parseDate(Cell cell, DataFormatter formatter, List<String> problems) {
-        if (cell == null || cell.getCellType() == CellType.BLANK) return null; // reported as "Date is required"
-        if (cell.getCellType() == CellType.NUMERIC) {
+        if (cell == null || valueType(cell) == CellType.BLANK) return null; // reported as "Date is required"
+        if (valueType(cell) == CellType.NUMERIC) {
             return DateUtil.getLocalDateTime(cell.getNumericCellValue()).toLocalDate();
         }
         String value = formatter.formatCellValue(cell).trim();
@@ -266,8 +274,11 @@ public class ExpenseImportService {
     }
 
     private static BigDecimal parseAmount(Cell cell, DataFormatter formatter, List<String> problems) {
-        if (cell == null || cell.getCellType() == CellType.BLANK) return null;
-        if (cell.getCellType() == CellType.NUMERIC) return BigDecimal.valueOf(cell.getNumericCellValue());
+        if (cell == null || valueType(cell) == CellType.BLANK) return null;
+        // Numbers (typed or calculated, e.g. =B2*1.18) are rounded to paise, as Excel shows them in a currency format
+        if (valueType(cell) == CellType.NUMERIC) {
+            return BigDecimal.valueOf(cell.getNumericCellValue()).setScale(2, RoundingMode.HALF_UP);
+        }
         String value = formatter.formatCellValue(cell).replaceAll("[₹,\\s]|(?i)rs\\.?|inr", "");
         try {
             return new BigDecimal(value);

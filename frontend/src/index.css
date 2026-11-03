@@ -26,6 +26,9 @@
   --bs-body-bg: var(--ti-mist);
   --bs-body-color: #1d2b3a;
   --bs-secondary-color: #54595f; /* site body text grey */
+  --bs-secondary-rgb: 84, 89, 95;  /* .text-secondary etc. use this, not --bs-secondary-color */
+  --danger-text: #c42435;          /* Bootstrap's red is just under 4.5:1 on the light background */
+  --success-text: #157347;
   --bs-border-color: #e1e9f0;
   --bs-primary: var(--brand);
   --bs-primary-rgb: var(--brand-rgb);
@@ -52,6 +55,9 @@
   --bs-body-bg: #071b2b;
   --bs-body-color: #e3edf5;
   --bs-secondary-color: #9fb3c5;
+  --bs-secondary-rgb: 159, 179, 197;
+  --danger-text: #f2838e;
+  --success-text: #5fd39a;
   --bs-border-color: #1e3c55;
   --bs-secondary-bg: #12304a;
   --bs-tertiary-bg: #0b2235;
@@ -133,6 +139,28 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
 .btn { font-weight: 500; border-radius: var(--bs-border-radius); }
 .btn-sm { border-radius: 0.5rem; }
 .btn .bi { margin-right: 0.35rem; }
+.btn-outline-secondary {
+  --bs-btn-color: var(--bs-secondary-color);
+  --bs-btn-border-color: rgba(var(--bs-secondary-rgb), 0.55);
+  --bs-btn-hover-bg: var(--bs-secondary-color);
+  --bs-btn-hover-border-color: var(--bs-secondary-color);
+  --bs-btn-hover-color: var(--surface);
+  --bs-btn-active-bg: var(--bs-secondary-color);
+  --bs-btn-active-color: var(--surface);
+}
+.btn-outline-success {
+  --bs-btn-color: var(--success-text);
+  --bs-btn-border-color: var(--success-text);
+  --bs-btn-hover-bg: var(--success-text);
+  --bs-btn-hover-border-color: var(--success-text);
+  --bs-btn-hover-color: var(--surface);
+}
+.btn-outline-danger {
+  --bs-btn-color: var(--danger-text);
+  --bs-btn-border-color: var(--danger-text);
+}
+.text-danger { color: var(--danger-text) !important; }
+.invalid-feedback { color: var(--danger-text); }
 .btn-icon .bi { margin-right: 0; }
 
 .form-control:focus,
@@ -183,6 +211,8 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
 }
 .table > :not(caption) > * > * { padding: 0.8rem 1rem; }
 .table-clickable tbody tr { cursor: pointer; }
+/* Scrollable tables can be focused and scrolled with the keyboard */
+.table-responsive:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--bs-border-radius-lg); }
 .table-clickable tbody tr:hover > * { background: rgba(var(--brand-rgb), 0.04); }
 
 .alert { border-radius: var(--bs-border-radius); }

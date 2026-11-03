@@ -26,10 +26,10 @@ image pipelines can treat them as separate projects by path. Splitting later is 
 | | Backend | Frontend |
 |---|---|---|
 | Build | `docker build -t ems-backend backend` | `docker build -t ems-frontend frontend` |
-| Base | `eclipse-temurin:17-jre` | `nginx:1.27-alpine` |
-| Port | 8080 | 80 |
-| User | non-root (uid 1001) | nginx default |
-| Liveness | `GET /actuator/health/liveness` | `GET /` |
+| Base | `eclipse-temurin:17-jre` | `nginxinc/nginx-unprivileged:1.27-alpine` |
+| Port | 8080 | 8080 |
+| User | non-root (uid 1001) | non-root (uid 101) |
+| Liveness | `GET /actuator/health/liveness` | `GET /` (port 8080) |
 | Readiness | `GET /actuator/health/readiness` (includes the database) | `GET /` |
 | Startup | ~10–20 s (runs DB migrations first); use a startupProbe with ~60 s budget | instant |
 | Suggested resources | request 500m CPU / 512Mi, limit 1Gi (heap is sized to 75% of the limit) | 50m / 64Mi |
@@ -64,6 +64,9 @@ Either of these works:
 - **Through the frontend (simplest):** route everything for `ems.example.com` to the frontend Service; its nginx forwards
   `/api/` to `BACKEND_URL`.
 - **At the ingress/ALB:** route `/api/*` to the backend Service and everything else to the frontend Service.
+
+The frontend's nginx sends the security headers (Content-Security-Policy, X-Frame-Options, nosniff, Referrer-Policy,
+Permissions-Policy); add HSTS at the load balancer once the HTTPS hostname is final.
 
 TLS terminates at the load balancer. Request bodies up to **12 MB** must be allowed (receipt uploads are capped at
 10 MB), e.g. `nginx.ingress.kubernetes.io/proxy-body-size: 12m` with ingress-nginx. ALB has no relevant limit.

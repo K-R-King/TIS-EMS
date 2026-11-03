@@ -96,11 +96,12 @@ cd frontend && npm test          # component tests (Vitest + Testing Library); n
 ```
 
 End-to-end tests drive a real browser through the whole app (Super Admin creates users, an Expense Admin adds an
-expense with a receipt, a Manager reviews it, the admin approves it, account lockout and unlock). They run against the
-Docker stack and create their own uniquely named users and expenses:
+expense with a receipt, a Manager reviews it, the admin approves it, account lockout, unlock and deactivation), fail on
+any browser console error, and check every main page for WCAG 2.1 AA accessibility issues (axe-core) in light and dark
+mode. They run against the Docker stack and create their own uniquely named users and expenses:
 
 ```bash
-DB_PASSWORD=pw EMS_INITIAL_ADMIN_PASSWORD=admin-pw docker compose up -d --build
+DB_PASSWORD=pw EMS_INITIAL_ADMIN_PASSWORD=admin-pw docker compose up -d --build   # stop `npm run dev` first: both use port 3000
 cd e2e && npm install && npx playwright install chromium
 E2E_ADMIN_PASSWORD=admin-pw npx playwright test
 docker compose down -v                                   # removes the test database
@@ -116,8 +117,8 @@ test fails). Dependabot opens update PRs.
 DB_PASSWORD=choose-one EMS_INITIAL_ADMIN_PASSWORD=choose-another docker compose up --build
 ```
 
-Open http://localhost:3000 and log in as `superadmin`. nginx in the frontend container serves the UI and forwards
-`/api` to the backend.
+Open http://localhost:3000 and log in as `superadmin`. nginx in the frontend container (non-root) serves the UI with
+security headers (including a Content-Security-Policy) and forwards `/api` to the backend.
 
 ## API overview
 

@@ -179,7 +179,7 @@ export default function ExpenseList() {
         {expenses?.length > 0 && (
           <>
             {/* Table on larger screens */}
-            <div className="table-responsive d-none d-md-block">
+            <div className="table-responsive d-none d-md-block" tabIndex={0} role="region" aria-label="Expenses table">
               <table className="table table-clickable align-middle">
                 <thead>
                   <tr>

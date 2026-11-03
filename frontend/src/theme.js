@@ -3,6 +3,9 @@ import { useEffect, useState } from 'react';
 const KEY = 'ems-theme';
 
 function initialTheme() {
+  // Normally already set by public/theme-init.js before the page was drawn
+  const applied = document.documentElement.getAttribute('data-bs-theme');
+  if (applied === 'light' || applied === 'dark') return applied;
   try {
     const saved = localStorage.getItem(KEY);
     if (saved === 'light' || saved === 'dark') return saved;

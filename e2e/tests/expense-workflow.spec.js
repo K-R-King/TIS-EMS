@@ -18,6 +18,20 @@ test.beforeAll(() => {
   if (!ADMIN_PASSWORD) throw new Error('Set E2E_ADMIN_PASSWORD to the superadmin password of the running stack');
 });
 
+// Any browser error (script errors, blocked resources, content-security-policy violations) fails the test.
+// 401s are expected: the app checks for an existing session and the lockout test uses wrong passwords.
+let consoleErrors;
+test.beforeEach(({ page }) => {
+  consoleErrors = [];
+  page.on('pageerror', (e) => consoleErrors.push(e.message));
+  page.on('console', (m) => {
+    if (m.type() === 'error' && !/401/.test(m.text())) consoleErrors.push(m.text());
+  });
+});
+test.afterEach(() => {
+  expect(consoleErrors, 'browser console errors').toEqual([]);
+});
+
 /** Submits the login form without checking the outcome. */
 async function attemptLogIn(page, username, password) {
   await page.goto('/login');
@@ -80,6 +94,7 @@ test('expense admin adds an expense with a receipt', async ({ page }) => {
 
   await expect(page.getByText('Expense created. It is now pending review.')).toBeVisible();
   await expect(page.getByText('receipt.pdf')).toBeVisible();
+  await expect(page.locator('iframe[title="Receipt"]')).toBeVisible(); // the PDF preview loaded
   await expect(page.getByText(`Entered by ${people.admin.name}`)).toBeVisible();
   expenseUrl = page.url();
 
@@ -110,8 +125,12 @@ test('manager can review and comment but not edit', async ({ page }) => {
   await expect(page.getByText(description)).toBeVisible();
   await expect(page.getByRole('link', { name: 'Edit' })).toHaveCount(0);
   await page.getByLabel('Add a comment').fill('Please attach the GST invoice.');
+  // Wait for the server to save it: the typed text in the box would otherwise satisfy a plain text check
+  const saved = page.waitForResponse((r) => r.url().endsWith('/comments') && r.request().method() === 'POST');
   await page.getByRole('button', { name: 'Add comment' }).click();
-  await expect(page.getByText('Please attach the GST invoice.')).toBeVisible();
+  expect((await saved).status()).toBe(201);
+  await expect(page.getByLabel('Add a comment')).toHaveValue('');
+  await expect(page.locator('.comment-text', { hasText: 'Please attach the GST invoice.' })).toBeVisible();
 
   await page.goto('/users');
   await expect(page.getByText('You do not have access to this page.')).toBeVisible();
@@ -127,7 +146,8 @@ test('expense admin approves it and the change is recorded', async ({ page }) =>
 
   await expect(page.getByText('Expense updated.')).toBeVisible();
   await expect(page.getByText('Status: Pending Review → Approved')).toBeVisible();
-  await expect(page.getByText(`${people.manager.name} · `)).toBeVisible(); // the manager's comment is kept
+  // The manager's comment is kept
+  await expect(page.locator('.comment-text', { hasText: 'Please attach the GST invoice.' })).toBeVisible();
   await logOut(page);
 });
 
@@ -172,5 +192,5 @@ test('a deactivated account is logged out and cannot log back in', async ({ brow
 
   // Their review comment is still on the expense
   await page.goto(expenseUrl);
-  await expect(page.getByText('Please attach the GST invoice.')).toBeVisible();
+  await expect(page.locator('.comment-text', { hasText: 'Please attach the GST invoice.' })).toBeVisible();
 });

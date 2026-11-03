@@ -202,6 +202,24 @@ class ApiSecurityTests {
     }
 
     @Test
+    void searchTreatsWildcardsAsPlainText() throws Exception {
+        mvc.perform(multipart("/api/expenses").param("date", LocalDate.now().toString()).param("amount", "10")
+                        .param("categoryId", categoryId.toString()).param("description", "Paid 50% upfront for file_42")
+                        .with(as("t-admin")))
+                .andExpect(status().isCreated());
+        mvc.perform(get("/api/expenses").param("q", "50% upfront").with(as("t-admin")))
+                .andExpect(jsonPath("$.items[*].description", hasItem("Paid 50% upfront for file_42")));
+        mvc.perform(get("/api/expenses").param("q", "file_42").with(as("t-admin")))
+                .andExpect(jsonPath("$.total").value(1));
+        // A lone % or _ must not match everything
+        mvc.perform(get("/api/expenses").param("q", "%").with(as("t-admin")))
+                .andExpect(jsonPath("$.total").value(1));
+        // As a wildcard, _ would match the % in "50% upfront"
+        mvc.perform(get("/api/expenses").param("q", "50_ upfront").with(as("t-admin")))
+                .andExpect(jsonPath("$.total").value(0));
+    }
+
+    @Test
     void listIsPaged() throws Exception {
         createExpenseAsAdmin();
         createExpenseAsAdmin();
