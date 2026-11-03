@@ -1,10 +1,11 @@
 node_modules/
 target/
 build/
+.idea/
+.DS_Store
 *.docx
-New folder/
-Backend/.backend-git-history/
-Backend/EMS-attempt - Copy/src/main/java/TIS/EMS/k.java
 .env
+.vercel
+# Database dumps contain user credentials
 *.sql
-uploads/
+!backend/src/main/resources/db/migration/*.sql

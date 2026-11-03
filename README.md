@@ -2,121 +2,121 @@
 
 An internal web app for entering, reviewing and tracking company expenses (replacing the Excel sheet).
 
-- **Frontend:** React + Bootstrap + Axios (`Frontend/my-app - Copy`), runs on http://localhost:3000
-- **Backend:** Java 17 + Spring Boot REST API (`Backend/EMS-attempt - Copy`), runs on http://localhost:8080
-- **Database:** MySQL 8 (database name `mydatabase`)
+| Folder | What | Runs on |
+|---|---|---|
+| `backend/` | Java 17 + Spring Boot REST API, Flyway migrations | http://localhost:8080 |
+| `frontend/` | React + Bootstrap + Axios | http://localhost:3000 |
+| — | MySQL 8, database `mydatabase` | localhost:3306 |
+
+Deploying to AWS is handled by DevOps; see **[HANDOFF.md](HANDOFF.md)**.
 
 ## Roles
 
 | Role (stored value) | Can do |
 |---|---|
 | Super Admin (`SUPERADMIN`) | Everything, plus User Management and Settings (dropdown lists) |
-| Expense Admin (`ADMIN`) | Add, edit and delete expenses; view all expenses |
+| Expense Admin (`ADMIN`) | Add, edit, delete and import expenses; view all expenses |
 | Manager (`MANAGER`) | View expenses and add review comments; cannot edit or delete |
 
 The backend enforces these rules on every API call; the UI only hides what a role cannot use.
 
-## Screens
+## Features
 
-Login · Dashboard (totals, by category, recent) · Add/Edit Expense · Expense List (filters: date range, category,
-payment mode, reimbursement type, status, plus text search) · Expense Details (receipt preview, review comments) ·
-User Management · Settings.
+- Login (username/password, BCrypt-hashed, server-side session). 5 wrong passwords lock an account for 15 minutes;
+  a Super Admin can unlock it. Everyone can change their own password under **Account**.
+- Dashboard: totals, this month vs last month, 6-month trend, spend by category and status, recent expenses.
+- Expenses: add/edit with receipt upload (PDF/JPG/PNG, 10 MB), list with filters (date range, category, payment mode,
+  reimbursement type, status), search and paging, details with receipt preview, manager review comments, and an
+  activity history of every change.
+- Excel import with a downloadable template; a file with any bad row is rejected with row-by-row reasons.
+- User Management and Settings (Super Admin only). Light and dark theme.
 
-## Requirements
+## Local development
 
-- Java 17 or newer
-- Node.js 18 or newer (with npm)
-- MySQL 8
-
-macOS (Homebrew):
-
-```bash
-brew install openjdk@17 node mysql
-brew services start mysql
-```
-
-Windows: install the JDK, Node.js and MySQL Installer from their official sites.
-
-## 1. Get the code
+Requirements: Java 17+, Node.js 18+, MySQL 8 (macOS: `brew install openjdk@17 node mysql && brew services start mysql`).
 
 ```bash
-git clone https://github.com/K-R-King/TIS-EMS.git
-cd TIS-EMS
-```
+# 1. Database (tables are created by the backend's migrations)
+mysql -uroot -e "CREATE DATABASE mydatabase"
 
-## 2. Set up the database
-
-```sql
-CREATE DATABASE mydatabase;
-```
-
-That is all. On startup the backend creates the tables, fills empty dropdown lists with the defaults
-(Travel, Hotel, Food, … / Cash, Credit Card, UPI, Bank Transfer / Personal Reimbursement, Company Paid, Advance
-Cleared), and, if there are no users, creates a `superadmin` account (see below).
-
-Passwords are stored as BCrypt hashes. Any account whose password is still in plain text (from older versions of
-this app or an old database dump) is hashed automatically on startup; the password itself stays the same.
-
-> Never commit a database dump to this repository: it contains user credentials. `*.sql` is in `.gitignore`.
-
-## 3. Run the backend
-
-```bash
-cd "Backend/EMS-attempt - Copy"
+# 2. Backend
+cd backend
 export DB_PASSWORD='your-mysql-root-password'   # omit if root has no password
-./mvnw spring-boot:run
+./mvnw spring-boot:run                          # Windows: .\mvnw.cmd spring-boot:run
+
+# 3. Frontend (second terminal)
+cd frontend
+npm install
+npm start                                       # http://localhost:3000
 ```
 
-Windows (PowerShell): `$env:DB_PASSWORD = '...'` then `.\mvnw.cmd spring-boot:run`.
+The React dev server forwards `/api` to the backend (`"proxy"` in `frontend/package.json`), so the app and API share
+one address, as in production.
 
-Wait for `Started EmsApplication`. With an empty `users` table the log prints the generated `superadmin` password
-once; set `EMS_INITIAL_ADMIN_PASSWORD` beforehand to choose it instead. Create the other users from
-**Users** in the app.
+On first start with an empty `users` table the backend creates a `superadmin` account and prints its generated
+password in the log once. Set `EMS_INITIAL_ADMIN_PASSWORD` beforehand to choose it. Create everyone else under
+**Users**. Default dropdown values (Travel, Hotel, … / Cash, UPI, … / Personal Reimbursement, …) are added automatically.
 
-Settings (environment variables):
+### Database changes
+
+The schema is managed by Flyway (`backend/src/main/resources/db/migration`). To change it, add a new
+`V3__what_changed.sql` file and update the entity classes; never edit a migration that has already run. Hibernate only
+validates the schema (`ddl-auto=validate`), so a mismatch stops the app at startup instead of silently altering tables.
+
+Databases created by versions of this app from before Flyway are detected and upgraded automatically.
+
+### Configuration (backend environment variables)
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `DB_URL` | `jdbc:mysql://localhost:3306/mydatabase` | Database |
 | `DB_USERNAME` / `DB_PASSWORD` | `root` / empty | Database login |
-| `EMS_UPLOAD_DIR` | `uploads` | Where receipt files are stored |
-| `EMS_ALLOWED_ORIGINS` | `http://localhost:3000` | Frontend address(es), comma-separated |
-| `EMS_INITIAL_ADMIN_PASSWORD` | random | Password for the first `superadmin` |
-
-## 4. Run the frontend
-
-In a second terminal:
-
-```bash
-cd "Frontend/my-app - Copy"
-npm install
-npm start
-```
-
-Open http://localhost:3000. To point the UI at another API address, set `REACT_APP_API_URL`
-(default `http://localhost:8080/api`).
+| `EMS_INITIAL_ADMIN_PASSWORD` | random, printed once | Password for the first `superadmin` |
+| `EMS_ALLOWED_ORIGINS` | `http://localhost:3000` | Address(es) the UI is served from, comma-separated |
+| `EMS_TIME_ZONE` | `Asia/Kolkata` | Time zone for "today" and "this month" |
+| `SPRING_PROFILES_ACTIVE` | — | `prod` in deployed environments: JSON logs, secure cookies, proxy headers |
+| `PORT` | `8080` | HTTP port |
 
 ## Tests
 
 ```bash
-cd "Backend/EMS-attempt - Copy" && ./mvnw test        # uses an in-memory H2 database, no MySQL needed
-cd "Frontend/my-app - Copy" && CI=true npm test
+cd backend && ./mvnw test        # API tests on in-memory H2, plus the real migrations on MySQL in Docker (skipped without Docker)
+cd frontend && CI=true npm test
 ```
 
-GitHub Actions (`.github/workflows/ci.yml`) runs both test suites, the production build, and builds the Docker
-images on every push to `main` and every pull request.
+GitHub Actions (`.github/workflows/ci.yml`) runs both suites, builds the production frontend, then builds the Docker
+images, starts the full stack with docker compose, and logs in through it. Dependabot opens weekly update PRs.
 
-## Docker
+## Run the whole stack in Docker
 
 ```bash
 DB_PASSWORD=choose-one EMS_INITIAL_ADMIN_PASSWORD=choose-another docker compose up --build
 ```
 
-This starts MySQL, the backend (http://localhost:8080) and the frontend (http://localhost:3000). The images in
-`Backend/EMS-attempt - Copy/Dockerfile` and `Frontend/my-app - Copy/Dockerfile` are what DevOps pushes to ECR for the
-EKS deployment. The frontend image takes the API address at build time:
-`docker build --build-arg REACT_APP_API_URL=https://ems-api.example.com/api ...`. The backend needs a persistent
-volume at `/app/uploads` for receipts.
+Open http://localhost:3000 and log in as `superadmin`. nginx in the frontend container serves the UI and forwards
+`/api` to the backend.
+
+## Free demo deployment (Vercel + Render + Aiven)
+
+For letting someone try the app before the AWS deployment. All three have free plans that need no credit card.
+The free backend sleeps after 15 minutes without traffic; the first request after that takes about a minute.
+
+1. **Database (Aiven):** create a free MySQL service at https://aiven.io. From its overview page note the host, port,
+   user (`avnadmin`) and password.
+2. **Backend (Render):** at https://render.com choose **New → Blueprint**, connect this GitHub repo, and it picks up
+   `render.yaml`. Fill in:
+   - `DB_URL` = `jdbc:mysql://HOST:PORT/defaultdb?sslMode=REQUIRED`
+   - `DB_USERNAME` = `avnadmin`, `DB_PASSWORD` = the Aiven password
+   - `EMS_INITIAL_ADMIN_PASSWORD` = the password you will log in with as `superadmin`
+   - `EMS_ALLOWED_ORIGINS` = your Vercel address (step 3; you can fill it in afterwards)
+
+   Wait until `https://tis-ems-api.onrender.com/actuator/health` shows `{"status":"UP"}`. If Render gave the service
+   a different address, change the URL in `frontend/vercel.json` to match and push.
+3. **Frontend (Vercel):** at https://vercel.com choose **Add New → Project**, import this repo, set **Root Directory**
+   to `frontend`, and deploy. Vercel serves the app and forwards `/api` to Render (`frontend/vercel.json`).
+4. Put the Vercel address into Render's `EMS_ALLOWED_ORIGINS`, open the Vercel address and log in as `superadmin`.
+
+Receipts and sessions are stored in the database, so nothing is lost when Render restarts the free backend.
 
 ## API overview
 
@@ -124,18 +124,10 @@ All endpoints are under `/api` and need a logged-in session (or an `Authorizatio
 
 | Endpoint | Who |
 |---|---|
-| `POST /auth/login` (Basic auth), `GET /auth/me`, `POST /auth/logout` | anyone |
-| `GET /expenses` (filters: `from`, `to`, `categoryId`, `paymentModeId`, `reimbursementTypeId`, `status`, `q`), `GET /expenses/{id}`, `GET /expenses/{id}/attachment`, `GET /expenses/stats` | all roles |
+| `POST /auth/login` (Basic auth), `GET /auth/me`, `POST /auth/logout`, `PUT /auth/password` | anyone / logged in |
+| `GET /expenses` (filters `from`, `to`, `categoryId`, `paymentModeId`, `reimbursementTypeId`, `status`, `q`; paging `page`, `size`), `GET /expenses/{id}`, `/{id}/attachment`, `/{id}/history`, `/stats` | all roles |
 | `GET`/`POST /expenses/{id}/comments` | all roles |
-| `POST /expenses`, `PUT /expenses/{id}` (multipart), `DELETE /expenses/{id}` | Super Admin, Expense Admin |
+| `POST /expenses`, `PUT /expenses/{id}` (multipart), `DELETE /expenses/{id}`, `POST /expenses/import`, `GET /expenses/import/template` | Super Admin, Expense Admin |
 | `GET /dropdowns/{categories,payment-modes,reimbursement-types,statuses}` | all roles |
-| `/users` (CRUD), `/settings/{categories,payment-modes,reimbursement-types}` (create/rename/delete) | Super Admin |
-
-## Working across computers
-
-```bash
-git pull                 # before you start
-git add -A
-git commit -m "message"
-git push                 # when you're done
-```
+| `/users` (CRUD, `POST /users/{id}/unlock`), `/settings/{categories,payment-modes,reimbursement-types}` | Super Admin |
+| `GET /actuator/health/liveness`, `/actuator/health/readiness` (not under `/api`) | public |

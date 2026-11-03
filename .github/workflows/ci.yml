@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: "Backend/EMS-attempt - Copy"
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -19,7 +19,7 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: maven
-      - name: Build and test
+      - name: Build and test (includes Flyway migrations on MySQL via Testcontainers)
         run: ./mvnw -B verify
 
   frontend:
@@ -27,14 +27,14 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: "Frontend/my-app - Copy"
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: "Frontend/my-app - Copy/package-lock.json"
+          cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - name: Test
         run: npm test -- --watchAll=false
@@ -45,14 +45,24 @@ jobs:
         env:
           CI: true
 
-  docker:
-    name: Docker images
+  smoke:
+    name: Docker images + smoke test
     needs: [backend, frontend]
     runs-on: ubuntu-latest
+    env:
+      DB_PASSWORD: ci-db-password
+      EMS_INITIAL_ADMIN_PASSWORD: ci-admin-password
     steps:
       - uses: actions/checkout@v4
-      - name: Build backend image
-        run: docker build -t ems-backend "Backend/EMS-attempt - Copy"
-      - name: Build frontend image
-        run: docker build -t ems-frontend "Frontend/my-app - Copy"
-      # Pushing to Amazon ECR and deploying to EKS is handled by the DevOps team.
+      - name: Build and start the stack
+        run: docker compose up -d --build
+      - name: Wait for the backend to be ready
+        run: curl --fail --silent --retry 40 --retry-delay 3 --retry-all-errors http://localhost:8080/actuator/health/readiness
+      - name: Log in through the frontend's /api proxy
+        run: |
+          curl --fail --silent -u superadmin:$EMS_INITIAL_ADMIN_PASSWORD -X POST http://localhost:3000/api/auth/login | tee /dev/stderr | grep -q '"role":"SUPERADMIN"'
+          curl --fail --silent http://localhost:3000/expenses | grep -q '<div id="root">'
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs
+      # Pushing images to Amazon ECR and deploying to EKS is handled by the DevOps team.
