@@ -26,7 +26,7 @@ image pipelines can treat them as separate projects by path. Splitting later is 
 | | Backend | Frontend |
 |---|---|---|
 | Build | `docker build -t ems-backend backend` | `docker build -t ems-frontend frontend` |
-| Base | `eclipse-temurin:17-jre` | `nginxinc/nginx-unprivileged:1.27-alpine` |
+| Base | `eclipse-temurin:25-jre` | `nginxinc/nginx-unprivileged:1.27-alpine` |
 | Port | 8080 | 8080 |
 | User | non-root (uid 1001) | non-root (uid 101) |
 | Liveness | `GET /actuator/health/liveness` | `GET /` (port 8080) |
@@ -96,7 +96,7 @@ CloudWatch Container Insights / Fluent Bit. Notable events: account lockouts are
 
 `.github/workflows/ci.yml` runs on every push and pull request:
 
-1. `backend`: `./mvnw verify` on JDK 17, including the Flyway migrations against a real MySQL 8.4 (Testcontainers).
+1. `backend`: `./mvnw verify` on JDK 25, including the Flyway migrations against a real MySQL 8.4 (Testcontainers).
 2. `frontend`: `npm ci`, ESLint, component tests, production build.
 3. `e2e`: builds both images, starts them with MySQL via docker compose, waits for readiness, then runs the Playwright
    end-to-end suite in Chromium through the frontend (the same images DevOps will deploy).

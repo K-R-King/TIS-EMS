@@ -4,7 +4,7 @@ An internal web app for entering, reviewing and tracking company expenses (repla
 
 | Folder | What | Runs on |
 |---|---|---|
-| `backend/` | Java 17 + Spring Boot REST API, Flyway migrations | http://localhost:8080 |
+| `backend/` | Java 25 + Spring Boot REST API, Flyway migrations | http://localhost:8080 |
 | `frontend/` | React + Bootstrap + Axios, built with Vite | http://localhost:3000 |
 | `e2e/` | Playwright end-to-end tests | — |
 | — | MySQL 8, database `mydatabase` | localhost:3306 |
@@ -39,8 +39,8 @@ The backend enforces these rules on every API call; the UI only hides what a rol
 
 ## Local development
 
-Requirements: Java 17+, Node.js 22.12+ (24 LTS recommended), MySQL 8
-(macOS: `brew install openjdk@17 node mysql && brew services start mysql`).
+Requirements: Java 25, Node.js 22.12+ (24 LTS recommended), MySQL 8
+(macOS: `brew install openjdk@25 node mysql && brew services start mysql`).
 
 ```bash
 # 1. Database (tables are created by the backend's migrations)
